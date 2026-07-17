@@ -1,0 +1,78 @@
+section {
+    padding: 80px 10%;
+    text-align: center;
+}
+
+.hero {
+    background: linear-gradient(135deg, #0b4f6c, #3282b8);
+    color: white;
+}
+
+.hero h1 {
+    font-size: 50px;
+    margin-bottom: 20px;
+}
+
+.hero p {
+    max-width: 800px;
+    margin: auto;
+    line-height: 1.8;
+    font-size: 18px;
+}
+
+button {
+    margin-top: 25px;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 8px;
+    background: #ff9800;
+    color: white;
+    cursor: pointer;
+}
+
+.about {
+    background: #ffffff;
+}
+
+.services {
+    background: #f4f6f9;
+}
+
+.service-container {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 30px;
+}
+
+.card {
+    width: 280px;
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+.categories {
+    background: white;
+}
+
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.category-box {
+    background: #0b4f6c;
+    color: white;
+    padding: 25px;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+.contact {
+    background: #f4f6f9;
+}
