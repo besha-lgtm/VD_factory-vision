@@ -31,18 +31,33 @@ import { TagModule } from 'primeng/tag';
 import { LoginComponent } from './login/login.component';
 import { FileUploadModule } from 'primeng/fileupload';
 import { MainMenuComponent } from './pages/main-menu/main-menu.component';
+import { PurchaseOrderQrComponent } from './pages/purchase-order-qr/purchase-order-qr.component';
+import { DashboardComponent } from './pages/dashboard/dashboard.component';
+import { SidebarComponent } from './layout/sidebar/sidebar.component';
 import { HeaderComponent } from './layout/header/header.component';
-import { HomeComponent } from './pages/home/home.component';
-import { ProductsComponent } from './pages/products/products.component';
+import { POQRComponent } from './pages/po-qr/po-qr.component';
+import { RecieveComponent } from './pages/recieve/recieve.component';
+import { PORecieveComponent } from './pages/po-recieve/po-recieve.component';
+import { IssueComponent } from './pages/issue/issue.component';
+import { IscanComponent } from "./pages/iscan/iscan.component";
+import { RscanComponent } from "./pages/rscan/rscan.component";
+
 
 @NgModule({
   declarations: [
     AppComponent,
     LoginComponent,
     MainMenuComponent,
+    PurchaseOrderQrComponent,
+    DashboardComponent,
+    SidebarComponent,
     HeaderComponent,
-    HomeComponent,
-    ProductsComponent,
+    POQRComponent,
+    RecieveComponent,
+    PORecieveComponent,
+    IssueComponent,
+    IscanComponent,
+    RscanComponent
   ],
   imports: [
     BrowserModule,

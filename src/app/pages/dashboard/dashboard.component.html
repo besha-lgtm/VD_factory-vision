@@ -1,0 +1,44 @@
+<div class="app-dashboard-layout">
+
+    <!-- Header -->
+    <app-header></app-header>
+
+    <!-- Main Layout -->
+    <div class="app-dashboard-body">
+
+        <!-- Sidebar -->
+        <app-sidebar></app-sidebar>
+
+        <!-- Content Area -->
+        <main class="app-dashboard-content">
+
+            <div class="app-dashboard-welcome-section">
+
+                <h1>Welcome to Smart Warehouse Automation System</h1>
+
+                <!-- <p>
+                    Simplify warehouse operations with intelligent automation, real-time inventory visibility,
+                    efficient purchase order management, QR-enabled receiving, and seamless stock tracking—all
+                    from one centralized dashboard.
+                </p> -->
+
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="dashboard-stats-grid">
+                <div class="dashboard-stat-card" *ngFor="let stat of stats">
+                    <div class="dashboard-stat-icon-wrapper" [style.background-color]="stat.color + '15'">
+                        <i [class]="stat.icon" [style.color]="stat.color"></i>
+                    </div>
+                    <div class="dashboard-stat-info">
+                        <span class="dashboard-stat-label">{{ stat.label }}</span>
+                        <h3 class="dashboard-stat-value" [style.color]="stat.color">{{ stat.value }}</h3>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+    </div>
+
+</div>

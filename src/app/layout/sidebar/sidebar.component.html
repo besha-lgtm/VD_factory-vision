@@ -1,0 +1,63 @@
+<div class="sidebar-backdrop" [class.visible]="!isCollapsed && isMobile" (click)="closeSidebar()">
+</div>
+
+<div class="sidebar" [class.collapsed]="isCollapsed">
+
+    <!-- LOGO -->
+    <div class="logo">
+        <div class="logo-image">
+            <img src="assets/logo.png" alt="VISIPACK Logo">
+        </div>
+
+        <div class="logo-text" *ngIf="!isCollapsed">
+            <h4>STOCK UPDATE WMS</h4>
+            <span>Smart WMS</span>
+        </div>
+    </div>
+
+    <!-- SCROLLABLE MENU -->
+    <div class="menu-container">
+        <div class="menu">
+
+            <!-- OVERVIEW / WMS MODULES -->
+            <p class="menu-title">OVERVIEW</p>
+            <div class="menu-group">
+
+                <a routerLink="/dashboard" routerLinkActive="active" (click)="onNavClick()">
+                    <i class="pi pi-chart-bar"></i>
+                    <span class="menu-text">Dashboard</span>
+                </a>
+
+                <a routerLink="/poqr" routerLinkActive="active" (click)="onNavClick()">
+                    <i class="pi pi-qrcode"></i>
+                    <span class="menu-text">PO QR Generator</span>
+                </a>
+
+                <a routerLink="/recieve" routerLinkActive="active" (click)="onNavClick()">
+                    <i class="pi pi-check-square"></i>
+                    <span class="menu-text">Receiving Verification</span>
+                </a>
+
+                <a routerLink="/porecieve" routerLinkActive="active" (click)="onNavClick()">
+                    <i class="pi pi-refresh"></i>
+                    <span class="menu-text">Stock Update</span>
+                </a>
+
+                <a routerLink="/issue" routerLinkActive="active" (click)="onNavClick()">
+                    <i class="pi pi-box"></i>
+                    <span class="menu-text">Issue item Verification</span>
+                </a>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- BOTTOM SECTION -->
+    <div class="app-sidebar-bottom" *ngIf="!isCollapsed">
+        <div class="app-sidebar-version">
+            Version 2.0
+        </div>
+    </div>
+
+</div>
