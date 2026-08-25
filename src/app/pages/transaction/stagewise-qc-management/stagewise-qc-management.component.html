@@ -1,0 +1,417 @@
+<div class="qc-workspace-container">
+  <!-- Left Panel: Jobs Awaiting QC -->
+  <div class="qc-left-panel">
+    <div class="qc-panel-header">
+      <div class="qc-panel-title-row">
+        <h2>Jobs Awaiting QC</h2>
+        <div class="qc-header-badges">
+          <i class="pi pi-filter filter-icon"></i>
+          <span class="qc-count-badge">{{ filteredJobs.length }}</span>
+        </div>
+      </div>
+      
+      <!-- Stage Filter Dropdown -->
+      <div class="filter-dropdown-wrapper">
+        <select [(ngModel)]="selectedStageFilter" class="qc-native-select">
+          <option *ngFor="let filter of stageFilters" [value]="filter">
+            {{ filter }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Search Box -->
+      <div class="qc-search-wrapper">
+        <i class="pi pi-search search-icon"></i>
+        <input 
+          type="text" 
+          [(ngModel)]="searchQuery" 
+          placeholder="Search JobID / Batch / Customer / PO..." 
+          class="qc-search-input" 
+        />
+      </div>
+    </div>
+
+    <!-- Scrollable Jobs List -->
+    <div class="qc-jobs-list">
+      <div 
+        *ngFor="let job of paginatedJobs" 
+        class="qc-job-card" 
+        [class.selected]="selectedJob?.jobId === job.jobId" 
+        (click)="selectJob(job)"
+      >
+        <div class="qc-card-header">
+          <!-- Batch No takes priority as primary heading -->
+          <span class="qc-card-batch">{{ job.batchNo }}</span>
+          <span class="qc-card-stage-badge" [class]="job.stageBadgeClass">
+            {{ getJobStageName(job) }}
+          </span>
+        </div>
+        
+        <!-- Job ID swapped to secondary detail field -->
+        <div class="qc-card-row">
+          <span class="qc-card-label">Job ID:</span>
+          <span class="qc-card-value font-semibold">{{ job.jobId }}</span>
+        </div>
+        
+        <div class="qc-card-row">
+          <span class="qc-card-label">Customer:</span>
+          <span class="qc-card-value">{{ job.customer }}</span>
+        </div>
+        
+        <div class="qc-card-row">
+          <span class="qc-card-label">POs:</span>
+          <span class="qc-card-value">
+            <span *ngFor="let po of job.pos; let last = last">
+              {{ po.poNo }}{{ !last ? ', ' : '' }}
+            </span>
+            ({{ job.pos.length }})
+          </span>
+          <span class="qc-card-meta-right">Items: {{ job.totalItems }}</span>
+        </div>
+        
+        <div class="qc-card-row">
+          <span class="qc-card-label">Planned Qty:</span>
+          <span class="qc-card-value">{{ job.plannedQty | number }}</span>
+          <span class="qc-card-time">{{ job.time }}</span>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="filteredJobs.length === 0" class="qc-empty-list">
+        <i class="pi pi-inbox"></i>
+        <p>No jobs awaiting QC match the criteria.</p>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="qc-list-pagination" *ngIf="totalPages > 1">
+      <button class="pag-btn" [class.disabled]="currentPage === 1" (click)="changePage(currentPage - 1); $event.stopPropagation()">&lt;</button>
+      <button 
+        *ngFor="let page of pageNumbers" 
+        class="pag-btn" 
+        [class.active]="currentPage === page" 
+        (click)="changePage(page); $event.stopPropagation()"
+      >
+        {{ page }}
+      </button>
+      <button class="pag-btn" [class.disabled]="currentPage === totalPages" (click)="changePage(currentPage + 1); $event.stopPropagation()">&gt;</button>
+    </div>
+  </div>
+
+  <!-- Right Panel: Job Detail & QC Check -->
+  <div class="qc-right-panel" *ngIf="selectedJob">
+    <!-- Panel Header -->
+    <div class="qc-detail-header">
+      <div class="qc-detail-title-block">
+        <h1>Batch No: {{ selectedJob.batchNo }}</h1>
+        <div class="qc-detail-badges">
+          <span class="badge badge-stage">{{ getJobStageName(selectedJob) }}</span>
+          <span class="badge badge-status">Awaiting QC Approval</span>
+        </div>
+      </div>
+      <div class="qc-detail-actions">
+        <button class="qc-btn qc-btn-outlined" (click)="viewHistory()">
+          Job History
+        </button>
+        <button class="qc-btn qc-btn-solid" (click)="refreshJobData()">
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- Job Stats Bar (Horizontal Layout) -->
+    <div class="qc-stats-bar">
+      <div class="bar-item">
+        <span class="bar-label">Batch No.</span>
+        <span class="bar-value">{{ selectedJob.batchNo }}</span>
+      </div>
+      <div class="bar-item">
+        <span class="bar-label">Customer</span>
+        <span class="bar-value">{{ selectedJob.customer }}</span>
+      </div>
+      <div class="bar-item">
+        <span class="bar-label">Planned Qty</span>
+        <span class="bar-value">{{ selectedJob.plannedQty | number }}</span>
+      </div>
+      <div class="bar-item">
+        <span class="bar-label">Produced Qty</span>
+        <span class="bar-value">{{ selectedJob.producedQty | number }}</span>
+      </div>
+      <div class="bar-item">
+        <span class="bar-label">UOM</span>
+        <span class="bar-value">{{ selectedJob.uom }}</span>
+      </div>
+      <div class="bar-item">
+        <span class="bar-label">Job Date</span>
+        <span class="bar-value">{{ selectedJob.jobDate }}</span>
+      </div>
+      <div class="bar-item">
+        <span class="bar-label">Due Date</span>
+        <span class="bar-value">{{ selectedJob.dueDate }}</span>
+      </div>
+      <div class="bar-item po-breakdown-box">
+        <span class="po-label">POs in this Job</span>
+        <div class="po-lines">
+          <div class="po-line" *ngFor="let po of selectedJob.pos">
+            <span class="po-name">{{ po.poNo }}</span>
+            <span class="po-qty">{{ po.qty | number }} Nos</span>
+          </div>
+          <div class="po-line total">
+            <span>Total</span>
+            <span>{{ selectedJob.plannedQty | number }} Nos</span>
+          </div>
+        </div>
+      </div>
+      <div class="bar-item">
+        <span class="bar-label">Total Items</span>
+        <span class="bar-value text-center">{{ selectedJob.totalItems }}</span>
+      </div>
+    </div>
+
+    <!-- Item Selector Tabs -->
+    <div class="qc-item-tabs-wrapper">
+      <div class="qc-item-tabs">
+        <button 
+          class="item-tab-btn" 
+          [class.active]="selectedItemIndex === 0" 
+          (click)="selectItemTab(0)"
+        >
+          All Items ({{ selectedJob.totalItems }})
+        </button>
+        <button 
+          *ngFor="let item of selectedJob.items; let i = index" 
+          class="item-tab-btn" 
+          [class.active]="selectedItemIndex === i + 1" 
+          (click)="selectItemTab(i + 1)"
+        >
+          Item {{ i + 1 }}: {{ item.name }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary Blue Info Bar -->
+    <div class="qc-summary-bar">
+      <div class="summary-text" *ngIf="selectedItemIndex === 0">
+        <strong>PO:</strong> {{ selectedJob.items[0].poNo }} 
+        <span class="sep">|</span> 
+        <strong>Planned Qty:</strong> {{ selectedJob.items[0].plannedQty | number }} {{ selectedJob.items[0].uom }} 
+        <span class="sep">|</span> 
+        <strong>Produced Qty:</strong> {{ selectedJob.items[0].producedQty | number }} {{ selectedJob.items[0].uom }} 
+        <span class="sep">|</span> 
+        <strong>UOM:</strong> {{ selectedJob.items[0].uom }}
+      </div>
+      <div class="summary-text" *ngIf="selectedItemIndex > 0">
+        <strong>PO:</strong> {{ selectedJob.items[selectedItemIndex - 1].poNo }} 
+        <span class="sep">|</span> 
+        <strong>Planned Qty:</strong> {{ selectedJob.items[selectedItemIndex - 1].plannedQty | number }} {{ selectedJob.items[selectedItemIndex - 1].uom }} 
+        <span class="sep">|</span> 
+        <strong>Produced Qty:</strong> {{ selectedJob.items[selectedItemIndex - 1].producedQty | number }} {{ selectedJob.items[selectedItemIndex - 1].uom }} 
+        <span class="sep">|</span> 
+        <strong>UOM:</strong> {{ selectedJob.items[selectedItemIndex - 1].uom }}
+      </div>
+      <div class="summary-dropdown">
+        <label>View Quantity In</label>
+        <select [(ngModel)]="viewQuantityIn" class="qc-small-select">
+          <option value="Nos">Nos</option>
+          <option value="Bundles">Bundles</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Production Stages & QC Status -->
+    <div class="production-stages-section">
+      <h3>Production Stages &amp; QC Status</h3>
+      <div class="stages-timeline">
+        <div 
+          *ngFor="let stage of selectedJob.stages; let i = index" 
+          class="stage-card" 
+          [class.approved]="stage.status === 'Approved'"
+          [class.pending]="stage.status === 'Pending'"
+          [class.active]="activeStageIndex === i"
+          (click)="onStageClick(stage, i)"
+        >
+          <!-- Approved State -->
+          <ng-container *ngIf="stage.status === 'Approved'">
+            <div class="stage-icon approved">
+              <i class="pi pi-check"></i>
+            </div>
+            <div class="stage-name">{{ stage.name }}</div>
+            <div class="stage-status approved">Approved</div>
+            <div class="stage-time">{{ stage.timestamp }}</div>
+          </ng-container>
+
+          <!-- Pending / Current State -->
+          <ng-container *ngIf="stage.status === 'Pending'">
+            <div class="stage-icon pending">
+              <i class="pi pi-clock"></i>
+            </div>
+            <div class="stage-name">{{ stage.name }}</div>
+            <div class="stage-status pending">Pending</div>
+            <div class="stage-time">Current Stage</div>
+          </ng-container>
+
+          <!-- Not Started State -->
+          <ng-container *ngIf="stage.status === 'Not Started'">
+            <div class="stage-icon not-started">
+              <i class="pi pi-circle"></i>
+            </div>
+            <div class="stage-name">{{ stage.name }}</div>
+            <div class="stage-status not-started">Not Started</div>
+            <div class="stage-time">-</div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage-Specific QC Inspection Parameters -->
+    <div class="qc-inspection-card">
+      <div class="qc-inspection-header">
+        <div class="inspection-title">
+          <h3>{{ selectedJob.stages[activeStageIndex].name }} QC Inspection</h3>
+          <i class="pi pi-info-circle info-icon" title="View checklist guidelines"></i>
+        </div>
+        <div class="inspection-meta">
+          <span class="inspected-on">
+            Inspected On: <strong>{{ selectedJob.inspectedOn || 'Not inspected' }}</strong>
+          </span>
+          <div class="inspector-select-wrapper">
+            <span>Inspected By:</span>
+            <select [(ngModel)]="selectedInspector" class="qc-native-select-sm">
+              <option *ngFor="let opt of inspectorOptions" [value]="opt">{{ opt }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parameters Table -->
+      <div class="table-responsive">
+        <table class="inspection-table">
+          <thead>
+            <tr>
+              <th style="width: 60px;">Sr. No.</th>
+              <th>Inspection Parameter</th>
+              <th>Specification / Standard</th>
+              <th>Observed Value</th>
+              <th style="width: 90px;">Unit</th>
+              <th style="width: 110px;">Result</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let param of activeStageParameters; let idx = index">
+              <td class="text-center font-bold">{{ param.srNo }}</td>
+              <td class="font-medium">{{ param.parameterName }}</td>
+              <td class="text-secondary">{{ param.specification }}</td>
+              <td>
+                <input 
+                  type="text" 
+                  [(ngModel)]="param.observedValue" 
+                  class="table-inline-input"
+                  placeholder="Enter value"
+                />
+              </td>
+              <td class="text-center text-secondary">{{ param.unit }}</td>
+              <td class="text-center">
+                <button 
+                  type="button" 
+                  class="btn-result-toggle" 
+                  [class.pass]="param.result === 'Pass'"
+                  [class.fail]="param.result === 'Fail'"
+                  (click)="toggleResult(param)"
+                >
+                  <i class="pi" [class.pi-check]="param.result === 'Pass'" [class.pi-times]="param.result === 'Fail'"></i>
+                  {{ param.result }}
+                </button>
+              </td>
+              <td>
+                <input 
+                  type="text" 
+                  [(ngModel)]="param.remarks" 
+                  class="table-inline-input"
+                  placeholder="-"
+                />
+              </td>
+            </tr>
+            <tr *ngIf="activeStageParameters.length === 0">
+              <td colspan="7" class="empty-table-cell">
+                <i class="pi pi-check-square"></i>
+                <p>No QC Parameters configured for this stage.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Bottom Remarks & Photo Upload Container -->
+      <div class="remarks-photos-container">
+        <!-- Left: Remarks Box -->
+        <div class="remarks-box-wrapper">
+          <label>Remarks / Observation</label>
+          <textarea 
+            [(ngModel)]="selectedJob.remarks" 
+            placeholder="All parameters are within specification." 
+            class="remarks-textarea"
+          ></textarea>
+        </div>
+
+        <!-- Right: Photo Upload Grid -->
+        <div class="photos-upload-wrapper">
+          <label>Attach Photos (Max 5)</label>
+          <div class="photos-grid">
+            <!-- Thumbnails of attached images -->
+            <div *ngFor="let photo of selectedJob.photos; let pi = index" class="photo-thumbnail">
+              <img [src]="photo.url" alt="Attached QC photo" class="thumb-image" />
+              <button type="button" class="btn-remove-photo" (click)="deletePhoto(pi)" title="Remove Photo">
+                <i class="pi pi-times"></i>
+              </button>
+            </div>
+
+            <!-- Upload Card -->
+            <div 
+              class="photo-upload-card" 
+              (click)="triggerUpload()" 
+              *ngIf="selectedJob.photos.length < 5"
+              title="Click to upload photos"
+            >
+              <i class="pi pi-plus"></i>
+              <span>Upload</span>
+            </div>
+            
+            <!-- Hidden input file -->
+            <input 
+              type="file" 
+              #fileInput 
+              style="display: none;" 
+              accept="image/*" 
+              multiple 
+              (change)="onPhotoSelected($event)" 
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Execution Panel Actions Bar -->
+      <div class="qc-actions-footer">
+        <div class="next-stage-hint">
+          <i class="pi pi-info-circle"></i>
+          <span *ngIf="activeStageIndex < selectedJob.stages.length - 1">
+            Next Stage: <strong>{{ selectedJob.stages[activeStageIndex + 1].name }} QC</strong> will be enabled after approval.
+          </span>
+          <span *ngIf="activeStageIndex === selectedJob.stages.length - 1">
+            All production stages reached. Complete final approval.
+          </span>
+        </div>
+        <div class="footer-buttons">
+          <button type="button" class="btn-action btn-hold-reject" (click)="holdOrRejectStage()">
+            Hold / Reject
+          </button>
+          <button type="button" class="btn-action btn-approve" (click)="approveCurrentStage()">
+            Approve &amp; Next Stage
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p-toast></p-toast>

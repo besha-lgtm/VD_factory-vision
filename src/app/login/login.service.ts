@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { AppSettings } from '../app.settings';
-import { Observable, BehaviorSubject } from 'rxjs';
+
+import { Observable, BehaviorSubject, of } from 'rxjs';
 import { map } from 'rxjs/operators';
+
 
 @Injectable({
   providedIn: 'root',
@@ -19,15 +20,12 @@ export class LoginService {
   }
 
   login(values: any): Observable<any> {
-    return this.http.post<any>(`${AppSettings.API_BASE_URL}/auth/login`, values).pipe(
-      map((res) => {
-        if (res?.token) {
-          sessionStorage.setItem('token', res.token);
-          this._isLoggedIn.next(true); // ✅ update state
-        }
-        return res;
-      })
-    );
+    if (values && values.email === 'admin@gmail.com' && values.password === 'admin@123') {
+      sessionStorage.setItem('token', 'static-admin-token');
+      this._isLoggedIn.next(true);
+      return of({ token: 'static-admin-token' });
+    }
+    return of({ error: 'Invalid email or password' });
   }
 
   logout(): void {

@@ -1,0 +1,824 @@
+<div class="pp-workspace-container">
+  <!-- Left Panel: Batch Planning -->
+  <div class="pp-left-panel">
+    <div class="pp-panel-header">
+      <div class="pp-panel-title-row">
+        <h2>Batch Planning</h2>
+        <div class="pp-header-badges">
+          <i class="pi pi-filter filter-icon"></i>
+          <span class="pp-count-badge">{{ filteredBatches.length }}</span>
+        </div>
+      </div>
+
+      <!-- Stage Filter Dropdown -->
+      <div class="filter-dropdown-wrapper">
+        <select [(ngModel)]="stageFilter" class="pp-native-select">
+          <option *ngFor="let filter of stageFilters" [value]="filter">
+            {{ filter }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Search Box -->
+      <div class="pp-search-wrapper">
+        <i class="pi pi-search search-icon"></i>
+        <input 
+          type="text" 
+          [(ngModel)]="searchQuery" 
+          placeholder="Search Batch / Job / Customer..." 
+          class="pp-search-input" 
+        />
+      </div>
+    </div>
+
+    <!-- Scrollable Batches List -->
+    <div class="pp-batches-list">
+      <div 
+        *ngFor="let batch of paginatedBatches" 
+        class="pp-batch-card" 
+        [class.selected]="selectedBatch?.batchNo === batch.batchNo" 
+        (click)="selectBatch(batch)"
+      >
+        <div class="pp-card-header">
+          <!-- Batch No takes priority as primary heading -->
+          <span class="pp-card-batch">{{ batch.batchNo }}</span>
+          <span class="pp-card-status-badge" [ngClass]="{
+            'status-released': batch.status === 'Released to Production',
+            'status-planned': batch.status === 'Planned',
+            'status-hold': batch.status === 'On Hold'
+          }">
+            {{ batch.status }}
+          </span>
+        </div>
+
+        <!-- Job ID swapped to secondary detail field -->
+        <div class="pp-card-row">
+          <span class="pp-card-label">Job ID:</span>
+          <span class="pp-card-value font-semibold">{{ batch.jobId }}</span>
+        </div>
+
+        <div class="pp-card-row">
+          <span class="pp-card-label">Customer:</span>
+          <span class="pp-card-value">{{ batch.customer }}</span>
+        </div>
+
+        <div class="pp-card-row">
+          <span class="pp-card-label">POs:</span>
+          <span class="pp-card-value">{{ batch.pos }}</span>
+        </div>
+
+        <div class="pp-card-row">
+          <span class="pp-card-label">Planned Qty:</span>
+          <span class="pp-card-value">{{ batch.totalPlannedQty | number }} Nos</span>
+          <span class="pp-card-time">{{ batch.time }}</span>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="filteredBatches.length === 0" class="pp-empty-list">
+        <i class="pi pi-calendar-minus"></i>
+        <p>No batches awaiting planning found.</p>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pp-list-pagination" *ngIf="totalPages > 1">
+      <button class="pag-btn" [class.disabled]="currentPage === 1" (click)="changePage(currentPage - 1); $event.stopPropagation()">&lt;</button>
+      <button 
+        *ngFor="let page of pageNumbers" 
+        class="pag-btn" 
+        [class.active]="currentPage === page" 
+        (click)="changePage(page); $event.stopPropagation()"
+      >
+        {{ page }}
+      </button>
+      <button class="pag-btn" [class.disabled]="currentPage === totalPages" (click)="changePage(currentPage + 1); $event.stopPropagation()">&gt;</button>
+    </div>
+  </div>
+
+  <!-- Right Panel: Batch Detail & Planner -->
+  <div class="pp-right-panel" *ngIf="selectedBatch">
+    <!-- Panel Header with buttons -->
+    <div class="pp-detail-header">
+      <div class="pp-detail-title-block">
+        <h1>Batch / Job Details (Created After Job Release)</h1>
+        <span class="status-badge" [ngClass]="{
+          'status-active': selectedBatch.status === 'Released to Production',
+          'status-badge-warn': selectedBatch.status === 'Planned',
+          'status-inactive': selectedBatch.status === 'On Hold'
+        }">
+          {{ selectedBatch.status }}
+        </span>
+      </div>
+      
+      <!-- Top Action Buttons -->
+      <div class="pp-detail-actions">
+        <button type="button" class="pp-btn pp-btn-action" (click)="newBatch()" [disabled]="isEditMode">
+          <i class="pi pi-plus"></i> New
+        </button>
+        <button type="button" class="pp-btn pp-btn-action" (click)="editBatch()" *ngIf="!isEditMode">
+          <i class="pi pi-pencil"></i> Edit
+        </button>
+        <button type="submit" class="pp-btn pp-btn-action pp-btn-save" (click)="saveBatch()" *ngIf="isEditMode">
+          <i class="pi pi-save"></i> Save
+        </button>
+        <button type="button" class="pp-btn pp-btn-action" (click)="printPlan()" [disabled]="isEditMode">
+          <i class="pi pi-print"></i> Print
+        </button>
+        <button type="button" class="pp-btn pp-btn-action pp-btn-excel" (click)="openExcelImport()" [disabled]="isEditMode">
+          <i class="pi pi-file-excel"></i> Excel
+        </button>
+        <button type="button" class="pp-btn pp-btn-action" (click)="triggerAttachmentUpload()" [disabled]="isEditMode">
+          <i class="pi pi-paperclip"></i> Attachments
+        </button>
+        <button type="button" class="pp-btn pp-btn-action pp-btn-cancel" (click)="cancelEdit()" *ngIf="isEditMode">
+          <i class="pi pi-times"></i> Cancel
+        </button>
+        
+        <!-- Hidden Attachments Input File -->
+        <input 
+          type="file" 
+          #attachmentInput 
+          style="display: none;" 
+          multiple 
+          (change)="onAttachmentSelected($event)" 
+        />
+      </div>
+    </div>
+
+    <!-- Batch Form Grid (Read-Only flat labels by default, inputs in Edit/Create Mode) -->
+    <div class="pp-form-grid" [class.editing]="isEditMode">
+      
+      <!-- Batch No (Primary row) -->
+      <div class="form-field-item">
+        <label>Batch No.</label>
+        <div class="field-display" *ngIf="!isEditMode">{{ selectedBatch.batchNo }}</div>
+        <input 
+          type="text" 
+          *ngIf="isEditMode" 
+          [(ngModel)]="selectedBatch.batchNo" 
+          class="form-inline-input"
+        />
+      </div>
+
+      <!-- Job ID (Secondary row) -->
+      <div class="form-field-item">
+        <label>Job ID</label>
+        <div class="field-display font-medium" *ngIf="!isEditMode">{{ selectedBatch.jobId }}</div>
+        <input 
+          type="text" 
+          *ngIf="isEditMode" 
+          [(ngModel)]="selectedBatch.jobId" 
+          class="form-inline-input"
+        />
+      </div>
+
+      <div class="form-field-item">
+        <label>Customer Name</label>
+        <div class="field-display" *ngIf="!isEditMode">{{ selectedBatch.customer }}</div>
+        <input 
+          type="text" 
+          *ngIf="isEditMode" 
+          [(ngModel)]="selectedBatch.customer" 
+          class="form-inline-input"
+        />
+      </div>
+
+      <div class="form-field-item">
+        <label>Customer PO(s)</label>
+        <div class="field-display" *ngIf="!isEditMode">{{ selectedBatch.pos }}</div>
+        <input 
+          type="text" 
+          *ngIf="isEditMode" 
+          [(ngModel)]="selectedBatch.pos" 
+          class="form-inline-input"
+        />
+      </div>
+
+      <div class="form-field-item">
+        <label>Total Items</label>
+        <div class="field-display" *ngIf="!isEditMode">{{ selectedBatch.totalItems }}</div>
+        <input 
+          type="number" 
+          *ngIf="isEditMode" 
+          [(ngModel)]="selectedBatch.totalItems" 
+          class="form-inline-input"
+        />
+      </div>
+
+      <div class="form-field-item">
+        <label>Job Release Date</label>
+        <div class="field-display" *ngIf="!isEditMode">{{ selectedBatch.jobReleaseDate }}</div>
+        <input 
+          type="text" 
+          *ngIf="isEditMode" 
+          [(ngModel)]="selectedBatch.jobReleaseDate" 
+          class="form-inline-input"
+        />
+      </div>
+
+      <div class="form-field-item">
+        <label>Planned Start Date</label>
+        <div class="field-display" *ngIf="!isEditMode">{{ selectedBatch.plannedStartDate }}</div>
+        <input 
+          type="text" 
+          *ngIf="isEditMode" 
+          [(ngModel)]="selectedBatch.plannedStartDate" 
+          class="form-inline-input"
+        />
+      </div>
+
+      <div class="form-field-item">
+        <label>Planned Delivery Date</label>
+        <div class="field-display" *ngIf="!isEditMode">{{ selectedBatch.plannedDeliveryDate }}</div>
+        <input 
+          type="text" 
+          *ngIf="isEditMode" 
+          [(ngModel)]="selectedBatch.plannedDeliveryDate" 
+          class="form-inline-input"
+        />
+      </div>
+
+      <div class="form-field-item">
+        <label>Planning Status</label>
+        <div class="field-display" *ngIf="!isEditMode">
+          <span class="status-badge" [ngClass]="{
+            'status-active': selectedBatch.status === 'Released to Production',
+            'status-badge-warn': selectedBatch.status === 'Planned',
+            'status-inactive': selectedBatch.status === 'On Hold'
+          }">
+            {{ selectedBatch.status }}
+          </span>
+        </div>
+        <select *ngIf="isEditMode" [(ngModel)]="selectedBatch.status" class="form-inline-select">
+          <option value="Planned">Planned</option>
+          <option value="Released to Production">Released to Production</option>
+          <option value="On Hold">On Hold</option>
+        </select>
+      </div>
+
+      <div class="form-field-item">
+        <label>Version No.</label>
+        <div class="field-display" *ngIf="!isEditMode">{{ selectedBatch.versionNo }}</div>
+        <input 
+          type="number" 
+          *ngIf="isEditMode" 
+          [(ngModel)]="selectedBatch.versionNo" 
+          class="form-inline-input"
+        />
+      </div>
+
+      <div class="form-field-item">
+        <label>Total Planned Qty (Nos)</label>
+        <div class="field-display" *ngIf="!isEditMode">{{ selectedBatch.totalPlannedQty | number }}</div>
+        <input 
+          type="number" 
+          *ngIf="isEditMode" 
+          [(ngModel)]="selectedBatch.totalPlannedQty" 
+          class="form-inline-input"
+        />
+      </div>
+
+      <div class="form-field-item">
+        <label>Total Weight (Kgs)</label>
+        <div class="field-display" *ngIf="!isEditMode">{{ selectedBatch.totalWeight | number }}</div>
+        <input 
+          type="number" 
+          *ngIf="isEditMode" 
+          [(ngModel)]="selectedBatch.totalWeight" 
+          class="form-inline-input"
+        />
+      </div>
+
+      <div class="form-field-item">
+        <label>Total Sheets</label>
+        <div class="field-display" *ngIf="!isEditMode">{{ selectedBatch.totalSheets | number }}</div>
+        <input 
+          type="number" 
+          *ngIf="isEditMode" 
+          [(ngModel)]="selectedBatch.totalSheets" 
+          class="form-inline-input"
+        />
+      </div>
+
+      <div class="form-field-item">
+        <label>Created By</label>
+        <div class="field-display">{{ selectedBatch.createdBy }}</div>
+      </div>
+
+      <div class="form-field-item">
+        <label>Created On</label>
+        <div class="field-display">{{ selectedBatch.createdOn }}</div>
+      </div>
+    </div>
+
+    <!-- Segmented Tab Selectors Bar -->
+    <div class="pp-tabs-bar-wrapper">
+      <div class="pp-tabs-bar">
+        <button 
+          *ngFor="let tab of tabs" 
+          class="tab-link-btn" 
+          [class.active]="activeTab === tab" 
+          (click)="switchTab(tab)"
+        >
+          {{ tab }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Tab Contents Panels -->
+    <div class="pp-tab-panel-content">
+      
+      <!-- 1. Item Details Tab -->
+      <div *ngIf="activeTab === 'Item Details'" class="panel-view-content">
+        <h4>Items in this Batch</h4>
+        <div class="table-responsive">
+          <table class="pp-data-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">S.No</th>
+                <th>Item Code</th>
+                <th>Item Description</th>
+                <th>Customer PO</th>
+                <th>Size (LxWxH) mm</th>
+                <th>Specs (Ply/Flute/Color)</th>
+                <th>Planned Qty</th>
+                <th>Sheet W (mm)</th>
+                <th>Sheet L (mm)</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of selectedBatch.items">
+                <td class="text-center font-bold">{{ item.sNo }}</td>
+                <td class="font-medium text-blue">{{ item.itemCode }}</td>
+                <td>
+                  <span *ngIf="!isEditMode">{{ item.itemDescription }}</span>
+                  <input *ngIf="isEditMode" type="text" [(ngModel)]="item.itemDescription" class="table-inline-input" />
+                </td>
+                <td>{{ item.customerPo }}</td>
+                <td>{{ item.size }}</td>
+                <td>{{ item.specification }}</td>
+                <td>
+                  <span *ngIf="!isEditMode"><strong>{{ item.plannedQty | number }}</strong></span>
+                  <input *ngIf="isEditMode" type="number" [(ngModel)]="item.plannedQty" class="table-inline-input text-center" />
+                </td>
+                <td>{{ item.sheetWidth }}</td>
+                <td>{{ item.sheetLength }}</td>
+                <td class="text-center">
+                  <span class="status-badge status-active">{{ item.status }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Horizontal Process Flow (Sequence) visible under items -->
+        <div class="pp-timeline-section-card" style="margin-top: 16px;">
+          <h4>Process Flow (Sequence)</h4>
+          <div class="timeline-workspace" style="margin-top: 12px;">
+            <div class="stages-timeline">
+              <div 
+                *ngFor="let stage of activeStagesSequence; let si = index" 
+                class="stage-timeline-card"
+                [class.completed]="stage.status === 'Completed'"
+                [class.in-progress]="stage.status === 'In Progress'"
+                [class.pending]="stage.status === 'Pending'"
+                [class.hold]="stage.status === 'On Hold'"
+              >
+                <div class="stage-top-row">
+                  <span class="stage-step-num">{{ si + 1 }}</span>
+                  <div class="status-dot"></div>
+                </div>
+                <div class="stage-card-body">
+                  <div class="stage-name">{{ stage.name }}</div>
+                  <div class="stage-machine">{{ stage.machine }}</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Legend -->
+            <div class="timeline-legend" style="margin-top: 8px;">
+              <div class="legend-item"><span class="dot dot-completed"></span> Completed</div>
+              <div class="legend-item"><span class="dot dot-progress"></span> In Progress</div>
+              <div class="legend-item"><span class="dot dot-pending"></span> Pending</div>
+              <div class="legend-item"><span class="dot dot-hold"></span> On Hold</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Three-Column Specifications Footer Grid -->
+        <div class="pp-three-column-grid" style="margin-top: 16px;">
+          
+          <!-- Column 1: Key Specifications -->
+          <div class="pp-grid-card">
+            <div class="pp-card-title-row">
+              <h5>Key Specifications</h5>
+              <i class="pi pi-sliders-h" style="color: #64748b;"></i>
+            </div>
+            <div class="specs-list">
+              <div class="spec-line"><span class="lbl">Flute Type</span><span class="val">{{ selectedBatch.keySpecs.fluteType }}</span></div>
+              <div class="spec-line"><span class="lbl">Ply</span><span class="val">{{ selectedBatch.keySpecs.ply }}</span></div>
+              <div class="spec-line"><span class="lbl">Color</span><span class="val">{{ selectedBatch.keySpecs.color }}</span></div>
+              <div class="spec-line"><span class="lbl">Board GSM (±)</span><span class="val">{{ selectedBatch.keySpecs.boardGsm }}</span></div>
+              <div class="spec-line"><span class="lbl">Sheet Width (mm)</span><span class="val">{{ selectedBatch.keySpecs.sheetWidth }}</span></div>
+              <div class="spec-line"><span class="lbl">Sheet Length (mm)</span><span class="val">{{ selectedBatch.keySpecs.sheetLength }}</span></div>
+              <div class="spec-line"><span class="lbl">Die Cut Outs</span><span class="val">{{ selectedBatch.keySpecs.dieCutOuts }}</span></div>
+              <div class="spec-line"><span class="lbl">Finish Size (mm)</span><span class="val">{{ selectedBatch.keySpecs.finishSize }}</span></div>
+            </div>
+          </div>
+
+          <!-- Column 2: Machine Plan -->
+          <div class="pp-grid-card">
+            <h5>Machine Plan</h5>
+            <div class="table-responsive">
+              <table class="pp-grid-table">
+                <thead>
+                  <tr>
+                    <th>Process</th>
+                    <th>Machine</th>
+                    <th>Model / Type</th>
+                    <th>Planned Speed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let stage of activeStagesSequence">
+                    <td>{{ stage.name }}</td>
+                    <td>{{ stage.machine }}</td>
+                    <td>{{ stage.model }}</td>
+                    <td>{{ stage.plannedSpeed }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Column 3: Other Information -->
+          <div class="pp-grid-card">
+            <h5>Other Information</h5>
+            <div class="specs-list">
+              <div class="spec-line"><span class="lbl">Standard / M. Wastage %</span><span class="val">{{ selectedBatch.standardWastage }}%</span></div>
+              <div class="spec-line"><span class="lbl">BOM Size NOS</span><span class="val">{{ selectedBatch.bomSize | number }}</span></div>
+              <div class="spec-line"><span class="lbl">Drawing No.</span><span class="val">{{ selectedBatch.drawingNo }}</span></div>
+              <div class="spec-line"><span class="lbl">Approved By</span><span class="val">{{ selectedBatch.approvedBy }}</span></div>
+              <div class="spec-line"><span class="lbl">Approved On</span><span class="val">{{ selectedBatch.approvedOn }}</span></div>
+              <div class="spec-line remarks-line" style="margin-top: 8px;">
+                <span class="lbl">Remarks</span>
+                <div class="remarks-box">{{ selectedBatch.remarks }}</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 2. Process Flow Tab (Sequence Timeline and Editor) -->
+      <div *ngIf="activeTab === 'Process Flow'" class="panel-view-content">
+        <div class="panel-title-action-row">
+          <h4>Process Flow (Sequence)</h4>
+          <button 
+            type="button" 
+            class="pp-btn-sm" 
+            (click)="startSequenceEdit()" 
+            *ngIf="!editingSequence"
+          >
+            <i class="pi pi-pencil"></i> Edit Sequence
+          </button>
+        </div>
+
+        <!-- Timeline View Mode -->
+        <div class="timeline-workspace" *ngIf="!editingSequence">
+          <div class="stages-timeline">
+            <div 
+              *ngFor="let stage of activeStagesSequence; let si = index" 
+              class="stage-timeline-card"
+              [class.completed]="stage.status === 'Completed'"
+              [class.in-progress]="stage.status === 'In Progress'"
+              [class.pending]="stage.status === 'Pending'"
+              [class.hold]="stage.status === 'On Hold'"
+            >
+              <div class="stage-top-row">
+                <span class="stage-step-num">{{ si + 1 }}</span>
+                <div class="status-dot"></div>
+              </div>
+              <div class="stage-card-body">
+                <div class="stage-name">{{ stage.name }}</div>
+                <div class="stage-machine">{{ stage.machine }}</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Legend -->
+          <div class="timeline-legend">
+            <div class="legend-item"><span class="dot dot-completed"></span> Completed</div>
+            <div class="legend-item"><span class="dot dot-progress"></span> In Progress</div>
+            <div class="legend-item"><span class="dot dot-pending"></span> Pending</div>
+            <div class="legend-item"><span class="dot dot-hold"></span> On Hold</div>
+          </div>
+        </div>
+
+        <!-- Interactive Sequence Editor Mode -->
+        <div class="sequence-editor-workspace" *ngIf="editingSequence">
+          <p class="section-help-text">Check the stages required for this particular batch. Checked stages define the production flow timeline.</p>
+          <div class="sequence-check-grid">
+            <div *ngFor="let stage of tempSequenceStages" class="sequence-check-card" [class.checked]="stage.checked">
+              <label class="sequence-check-label">
+                <input type="checkbox" [(ngModel)]="stage.checked" />
+                <div class="check-card-info">
+                  <span class="chk-stage-name">{{ stage.name }}</span>
+                  <span class="chk-stage-machine">Machine: {{ stage.machine }} ({{ stage.model }})</span>
+                </div>
+              </label>
+            </div>
+          </div>
+          <div class="sequence-editor-actions">
+            <button type="button" class="btn-action btn-sequence-cancel" (click)="cancelSequenceEdit()">
+              Cancel
+            </button>
+            <button type="button" class="btn-action btn-sequence-save" (click)="saveSequence()">
+              Save Sequence
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Materials / BOM Tab -->
+      <div *ngIf="activeTab === 'Materials / BOM'" class="panel-view-content">
+        <h4>Bills of Materials (BOM) Requirements</h4>
+        <div class="table-responsive">
+          <table class="pp-data-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">Sr No</th>
+                <th>Material Code</th>
+                <th>Material Description</th>
+                <th style="width: 80px;">UOM</th>
+                <th>Standard Qty</th>
+                <th>Required Qty</th>
+                <th>Allocated Qty</th>
+                <th>Shortfall</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="text-center">1</td>
+                <td class="font-medium text-blue">MAT-00918</td>
+                <td>150 GSM Kraft Paper Reel (Fluting)</td>
+                <td class="text-center">Kgs</td>
+                <td>4,200</td>
+                <td>4,200</td>
+                <td>4,200</td>
+                <td class="text-green text-center">0</td>
+                <td class="text-center"><span class="status-badge status-active">Allocated</span></td>
+              </tr>
+              <tr>
+                <td class="text-center">2</td>
+                <td class="font-medium text-blue">MAT-00922</td>
+                <td>120 GSM Kraft Paper Reel (Liner)</td>
+                <td class="text-center">Kgs</td>
+                <td>3,100</td>
+                <td>3,100</td>
+                <td>3,100</td>
+                <td class="text-green text-center">0</td>
+                <td class="text-center"><span class="status-badge status-active">Allocated</span></td>
+              </tr>
+              <tr>
+                <td class="text-center">3</td>
+                <td class="font-medium text-blue">MAT-00801</td>
+                <td>Native Starch Adhesive Powder</td>
+                <td class="text-center">Kgs</td>
+                <td>950</td>
+                <td>950</td>
+                <td>950</td>
+                <td class="text-green text-center">0</td>
+                <td class="text-center"><span class="status-badge status-active">Allocated</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 4. Specifications Tab -->
+      <div *ngIf="activeTab === 'Specifications'" class="panel-view-content">
+        <h4>Key Quality Specifications</h4>
+        <div class="specs-details-grid">
+          <div class="spec-detail-item">
+            <span class="spec-lbl">Flute Type</span>
+            <span class="spec-val" *ngIf="!isEditMode">{{ selectedBatch.keySpecs.fluteType }}</span>
+            <input *ngIf="isEditMode" type="text" [(ngModel)]="selectedBatch.keySpecs.fluteType" class="table-inline-input" />
+          </div>
+          <div class="spec-detail-item">
+            <span class="spec-lbl">Ply Specification</span>
+            <span class="spec-val" *ngIf="!isEditMode">{{ selectedBatch.keySpecs.ply }}</span>
+            <input *ngIf="isEditMode" type="text" [(ngModel)]="selectedBatch.keySpecs.ply" class="table-inline-input" />
+          </div>
+          <div class="spec-detail-item">
+            <span class="spec-lbl">Paper Color</span>
+            <span class="spec-val" *ngIf="!isEditMode">{{ selectedBatch.keySpecs.color }}</span>
+            <input *ngIf="isEditMode" type="text" [(ngModel)]="selectedBatch.keySpecs.color" class="table-inline-input" />
+          </div>
+          <div class="spec-detail-item">
+            <span class="spec-lbl">Board GSM (±)</span>
+            <span class="spec-val" *ngIf="!isEditMode">{{ selectedBatch.keySpecs.boardGsm }}</span>
+            <input *ngIf="isEditMode" type="text" [(ngModel)]="selectedBatch.keySpecs.boardGsm" class="table-inline-input" />
+          </div>
+          <div class="spec-detail-item">
+            <span class="spec-lbl">Sheet Width (mm)</span>
+            <span class="spec-val" *ngIf="!isEditMode">{{ selectedBatch.keySpecs.sheetWidth }}</span>
+            <input *ngIf="isEditMode" type="number" [(ngModel)]="selectedBatch.keySpecs.sheetWidth" class="table-inline-input" />
+          </div>
+          <div class="spec-detail-item">
+            <span class="spec-lbl">Sheet Length (mm)</span>
+            <span class="spec-val" *ngIf="!isEditMode">{{ selectedBatch.keySpecs.sheetLength }}</span>
+            <input *ngIf="isEditMode" type="number" [(ngModel)]="selectedBatch.keySpecs.sheetLength" class="table-inline-input" />
+          </div>
+          <div class="spec-detail-item">
+            <span class="spec-lbl">Die Cut Outs</span>
+            <span class="spec-val" *ngIf="!isEditMode">{{ selectedBatch.keySpecs.dieCutOuts }}</span>
+            <input *ngIf="isEditMode" type="number" [(ngModel)]="selectedBatch.keySpecs.dieCutOuts" class="table-inline-input" />
+          </div>
+          <div class="spec-detail-item">
+            <span class="spec-lbl">Finish Box Size</span>
+            <span class="spec-val" *ngIf="!isEditMode">{{ selectedBatch.keySpecs.finishSize }}</span>
+            <input *ngIf="isEditMode" type="text" [(ngModel)]="selectedBatch.keySpecs.finishSize" class="table-inline-input" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Machine Plan Tab -->
+      <div *ngIf="activeTab === 'Machine Plan'" class="panel-view-content">
+        <h4>Machine Speed Allocation Details</h4>
+        <div class="table-responsive">
+          <table class="pp-data-table">
+            <thead>
+              <tr>
+                <th>Process Stage</th>
+                <th>Machine Station</th>
+                <th>Model / Type</th>
+                <th>Planned Speed Limit</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let stage of activeStagesSequence">
+                <td class="font-medium">{{ stage.name }}</td>
+                <td>{{ stage.machine }}</td>
+                <td class="text-secondary">{{ stage.model }}</td>
+                <td>
+                  <span *ngIf="!isEditMode"><strong>{{ stage.plannedSpeed }}</strong></span>
+                  <input *ngIf="isEditMode" type="text" [(ngModel)]="stage.plannedSpeed" class="table-inline-input" />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 6. QC Plan Tab -->
+      <div *ngIf="activeTab === 'QC Plan'" class="panel-view-content">
+        <h4>Quality Control Checklist Guidelines</h4>
+        <div class="table-responsive">
+          <table class="pp-data-table">
+            <thead>
+              <tr>
+                <th style="width: 60px;">Sr. No.</th>
+                <th>QC Stage</th>
+                <th>Parameter Checked</th>
+                <th>Verification Frequency</th>
+                <th>Target Limits</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="text-center">1</td>
+                <td>Sheet Cutting</td>
+                <td>Sheet dimensions & Squareness</td>
+                <td>Start of run, then every 200 sheets</td>
+                <td>Width ±1.0mm, Diagonal ≤ 2.0mm</td>
+              </tr>
+              <tr>
+                <td class="text-center">2</td>
+                <td>Corrugation</td>
+                <td>Adhesive bonding & Moisture</td>
+                <td>Continuous sensor, manual check every hour</td>
+                <td>Bonding complete, moisture 8% - 12%</td>
+              </tr>
+              <tr>
+                <td class="text-center">3</td>
+                <td>Printing</td>
+                <td>Registration, density & readability</td>
+                <td>First pull, then every 100 boxes</td>
+                <td>Register ±0.5mm, scan pass rate 100%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 7. Notes Tab -->
+      <div *ngIf="activeTab === 'Notes'" class="panel-view-content">
+        <div class="notes-attachments-layout">
+          <!-- Remarks / Notes -->
+          <div class="notes-textarea-col">
+            <label>Remarks / Notes</label>
+            <textarea 
+              [(ngModel)]="selectedBatch.remarks" 
+              placeholder="All specifications, materials and machines are planned as per customer requirements." 
+              class="notes-textarea"
+            ></textarea>
+          </div>
+
+          <!-- Attachments list -->
+          <div class="attachments-list-col">
+            <label>Attachments List</label>
+            <div class="attachments-scroll-box">
+              <div *ngFor="let file of selectedBatch.attachments; let ai = index" class="attachment-item-card">
+                <i class="pi pi-file file-icon"></i>
+                <div class="file-name-meta">
+                  <span class="file-name" [title]="file.name">{{ file.name }}</span>
+                  <span class="file-size">{{ file.size }}</span>
+                </div>
+                <button type="button" class="btn-delete-file" (click)="deleteAttachment(ai)" title="Delete File">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+              <div *ngIf="selectedBatch.attachments.length === 0" class="empty-attachments-view">
+                <i class="pi pi-cloud-upload"></i>
+                <p>No attached specification documents or drawings.</p>
+                <button type="button" class="btn-upload-notes" (click)="triggerAttachmentUpload()">
+                  Choose Files
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. History Tab -->
+      <div *ngIf="activeTab === 'History'" class="panel-view-content">
+        <h4>Planning Audit Trail History Logs</h4>
+        <div class="history-timeline-logs">
+          <div class="log-card">
+            <span class="log-date">19/12/2024 10:45 AM</span>
+            <p class="log-desc"><strong>Batch Released:</strong> Planning details locked, BOM allocated, and route released to corrugator line by <strong>{{ selectedBatch.createdBy }}</strong>.</p>
+          </div>
+          <div class="log-card">
+            <span class="log-date">19/12/2024 10:30 AM</span>
+            <p class="log-desc"><strong>Created:</strong> Initial planning shell generated by <strong>{{ selectedBatch.createdBy }}</strong>.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Excel Import Popup Dialog -->
+<p-dialog 
+  [(visible)]="showExcelDialog" 
+  [modal]="true" 
+  [draggable]="false" 
+  [resizable]="false" 
+  [style]="{ width: '480px' }" 
+  header="Excel Import Plan"
+  styleClass="excel-upload-dialog"
+  [appendTo]="'body'"
+>
+  <div class="excel-import-workspace">
+    <div class="upload-dropzone" (click)="triggerExcelUpload()">
+      <i class="pi pi-file-excel dropzone-icon"></i>
+      <p class="dropzone-title">Click or Drag &amp; Drop to Upload spreadsheet</p>
+      <span class="dropzone-formats">Supported Formats: .xlsx, .csv</span>
+    </div>
+    
+    <!-- Hidden file upload -->
+    <input 
+      type="file" 
+      #excelInput 
+      style="display: none;" 
+      accept=".xlsx, .xls, .csv" 
+      (change)="onExcelFileUploaded($event)" 
+    />
+
+    <!-- Template guidelines -->
+    <div class="template-instructions-box">
+      <h5>Spreadsheet Columns Required</h5>
+      <ul>
+        <li><code>BatchNo</code>, <code>JobID</code>, <code>Customer</code>, <code>PlannedQty</code></li>
+        <li><code>Sheets</code>, <code>Weight</code>, <code>ItemDetails</code></li>
+      </ul>
+      <a href="javascript:void(0)" class="template-download-link" (click)="downloadExcelTemplate()">
+        <i class="pi pi-download"></i> Download Excel Template
+      </a>
+    </div>
+
+    <!-- Simulation Trigger -->
+    <div class="dialog-actions-row">
+      <button type="button" class="btn-import-mock" (click)="simulateExcelImport()">
+        <i class="pi pi-play"></i> Autofill Template Demo Data
+      </button>
+    </div>
+  </div>
+</p-dialog>
+
+<p-toast></p-toast>

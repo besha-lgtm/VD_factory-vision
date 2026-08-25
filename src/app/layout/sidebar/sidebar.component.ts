@@ -8,81 +8,76 @@ import { filter } from 'rxjs/operators';
   selector: 'app-sidebar',
   standalone: false,
   templateUrl: './sidebar.component.html',
-  styleUrls: ['./sidebar.component.css']
+  styleUrl: './sidebar.component.css'
 })
 export class SidebarComponent implements OnInit, OnDestroy {
 
   isCollapsed = false;
   isMobile = false;
-  openModule: string | null = null;
-  
+
+openModule: string | null = null;
   private sub!: Subscription;
   private readonly MOBILE_BREAKPOINT = 1024;
 
-  constructor(
-    private sidebarService: SidebarService,
-    private router: Router
-  ) {}
+  constructor(private sidebarService: SidebarService,
+  private router: Router) {}
 
-  ngOnInit() {
-    this.checkScreenSize();
+ ngOnInit() {
+  this.checkScreenSize();
 
-    this.sub = this.sidebarService.sidebarState$.subscribe(state => {
-      this.isCollapsed = state;
-      if (state) {
-        document.body.classList.add('sidebar-collapsed');
-      } else {
-        document.body.classList.remove('sidebar-collapsed');
-      }
+  this.sub = this.sidebarService.sidebarState$.subscribe(state => {
+    this.isCollapsed = state;
+  });
+
+  // 👇 Listen to route changes
+  this.router.events
+    .pipe(filter(event => event instanceof NavigationEnd))
+    .subscribe((event: NavigationEnd) => {
+      this.setModuleFromRoute(event.urlAfterRedirects);
     });
 
-    // Listen to route changes
-    this.router.events
-      .pipe(filter(event => event instanceof NavigationEnd))
-      .subscribe((event: NavigationEnd) => {
-        this.setModuleFromRoute(event.urlAfterRedirects);
-      });
-
-    // Run once on load
-    this.setModuleFromRoute(this.router.url);
+  // 👇 also run once on load
+  this.setModuleFromRoute(this.router.url);
+}
+setModuleFromRoute(url: string) {
+  if (url.startsWith('/transaction')) {
+    this.openModule = 'transaction';
+  } else if (url.startsWith('/master')) {
+    this.openModule = 'master';
+  } else if (url.startsWith('/reports')) {
+    this.openModule = 'reports';
+  }else if (url.startsWith('/machine')) {
+    this.openModule = 'machine';
   }
-
-  setModuleFromRoute(url: string) {
-    if (url.startsWith('/transaction')) {
-      this.openModule = 'transaction';
-    } else if (url.startsWith('/master')) {
-      this.openModule = 'master';
-    } else if (url.startsWith('/reports')) {
-      this.openModule = 'reports';
-    } else if (url.startsWith('/machine')) {
-      this.openModule = 'machine';
-    } else {
-      this.openModule = null;
-    }
+   else {
+    this.openModule = null; // optional
   }
-
+}
   ngOnDestroy() {
     this.sub?.unsubscribe();
   }
-
-  toggleModule(module: string) {
+   toggleModule(module: string) {
     if (this.openModule === module) {
-      this.openModule = null;
+      this.openModule = null; // collapse if already open
     } else {
-      this.openModule = module;
+      this.openModule = module; // open the clicked module
     }
   }
 
+
+  /** Close sidebar when a nav link is clicked on mobile */
   onNavClick() {
     if (this.isMobile) {
       this.sidebarService.setState(true); // collapsed = hidden on mobile
     }
   }
 
+  /** Close sidebar when backdrop is clicked */
   closeSidebar() {
     this.sidebarService.setState(true);
   }
 
+  /** Detect screen resize */
   @HostListener('window:resize')
   onResize() {
     this.checkScreenSize();
@@ -101,10 +96,11 @@ export class SidebarComponent implements OnInit, OnDestroy {
       this.sidebarService.setState(false);
     }
   }
-
-  logout(): void {
-    localStorage.clear();
-    sessionStorage.clear();
-    this.router.navigate(['/login']);
-  }
 }
+
+
+ 
+
+ 
+
+  

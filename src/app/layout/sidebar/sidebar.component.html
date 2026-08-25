@@ -1,63 +1,146 @@
-<div class="sidebar-backdrop" [class.visible]="!isCollapsed && isMobile" (click)="closeSidebar()">
+<div 
+  class="sidebar-backdrop" 
+  [class.visible]="!isCollapsed && isMobile"
+  (click)="closeSidebar()">
 </div>
 
 <div class="sidebar" [class.collapsed]="isCollapsed">
 
-    <!-- LOGO -->
-    <div class="logo">
-        <div class="logo-image">
-            <img src="assets/logo.png" alt="VISIPACK Logo">
-        </div>
+  <!-- LOGO -->
+ <div class="logo">
+  <div class="logo-image">
+    <img src="assets/images/logo.png" alt="VISIPAK ERP Logo">
+  </div>
 
-        <div class="logo-text" *ngIf="!isCollapsed">
-            <h4>STOCK UPDATE WMS</h4>
-            <span>Smart WMS</span>
-        </div>
-    </div>
+  <div class="logo-text" *ngIf="!isCollapsed">
+    <h4>VISIPAK ERP</h4>
+    <span>Production Planning & Exe.</span>
+  </div>
+</div>
+  <!-- SCROLLABLE MENU -->
+  <div class="menu-container">
+    <div class="menu">
 
-    <!-- SCROLLABLE MENU -->
-    <div class="menu-container">
-        <div class="menu">
+      <!-- OVERVIEW -->
+      <p class="menu-title">OVERVIEW</p>
+      <div class="menu-group">
+        <a routerLink="/dashboard" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-chart-bar"></i>
+          <span class="menu-text">Dashboard</span>
+        </a>
+      </div>
 
-            <!-- OVERVIEW / WMS MODULES -->
-            <p class="menu-title">OVERVIEW</p>
-            <div class="menu-group">
+      <!-- MASTER MODULE -->
+      <p class="menu-title" (click)="toggleModule('master')" [class.expandable]="true">
+        MASTER MODULES
+        <i class="pi" [ngClass]="{'pi-angle-down': openModule==='master', 'pi-angle-right': openModule!=='master'}"></i>
+      </p>
 
-                <a routerLink="/dashboard" routerLinkActive="active" (click)="onNavClick()">
-                    <i class="pi pi-chart-bar"></i>
-                    <span class="menu-text">Dashboard</span>
-                </a>
+      <div *ngIf="openModule === 'master'" class="menu-group">
+         <a routerLink="/master/employee-master" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-id-card"></i>
+          <span class="menu-text">Employee Master</span>
+        </a>
+        <a routerLink="/master/users-and-roles" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-users"></i>
+          <span class="menu-text">Users & Roles</span>
+        </a>
+        <a routerLink="/master/customer-master" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-briefcase"></i>
+          <span class="menu-text">Customer Master</span>
+        </a>
+        <a routerLink="/master/supplier-master" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-building"></i>
+          <span class="menu-text">Supplier Master</span>
+        </a>
+        <a routerLink="/master/item-pms-master" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-box"></i>
+          <span class="menu-text">Item / PMS Master</span>
+        </a>
+        <a routerLink="/master/layer-specs" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-compass"></i>
+          <span class="menu-text">Layer Specs</span>
+        </a>
+      </div>
 
-                <a routerLink="/poqr" routerLinkActive="active" (click)="onNavClick()">
-                    <i class="pi pi-qrcode"></i>
-                    <span class="menu-text">PO QR Generator</span>
-                </a>
+      <!-- TRANSACTION MODULES -->
+      <p class="menu-title" (click)="toggleModule('transaction')" [class.expandable]="true">
+        TRANSACTION MODULES
+        <i class="pi" [ngClass]="{'pi-angle-down': openModule==='transaction', 'pi-angle-right': openModule!=='transaction'}"></i>
+      </p>
 
-                <a routerLink="/recieve" routerLinkActive="active" (click)="onNavClick()">
-                    <i class="pi pi-check-square"></i>
-                    <span class="menu-text">Receiving Verification</span>
-                </a>
+      <div *ngIf="openModule === 'transaction'" class="menu-group">
+        <a routerLink="/transaction/customer-po" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-file-edit"></i>
+          <span class="menu-text">Customer PO</span>
+        </a>
+         <a routerLink="/transaction/po-approval" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-inbox"></i>
+          <span class="menu-text">Approvals</span>
+        </a>
+        <a routerLink="/transaction/daily-jobs" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-calendar"></i>
+          <span class="menu-text">Daily Jobs</span>
+        </a>
+        <a routerLink="/transaction/stock-verification" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-search"></i>
+          <span class="menu-text">Stock Verification</span>
+        </a>
+        <a routerLink="/transaction/production-planning" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-bullseye"></i>
+          <span class="menu-text">Production Planning</span>
+        </a>
+        <a routerLink="/transaction/production-execution" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-cog"></i>
+          <span class="menu-text">Production Execution</span>
+        </a>
+        <a routerLink="/transaction/stagewise-qc-management" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-check-circle"></i>
+          <span class="menu-text">Stagewise QC Management</span>
+        </a>
+        <a routerLink="/transaction/qc-management" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-check-square"></i>
+          <span class="menu-text">QC Management</span>
+        </a>
+        <a routerLink="/transaction/finished-goods" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-chart-bar"></i>
+          <span class="menu-text">Finished Goods</span>
+        </a>
+        <a routerLink="/transaction/dispatch" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-truck"></i>
+          <span class="menu-text">Dispatch</span>
+        </a>
+         <a routerLink="/transaction/invoice" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-dollar"></i>
+          <span class="menu-text">Invoice</span>
+        </a>
+      </div>
 
-                <a routerLink="/porecieve" routerLinkActive="active" (click)="onNavClick()">
-                    <i class="pi pi-refresh"></i>
-                    <span class="menu-text">Stock Update</span>
-                </a>
+      <!-- REPORTS -->
+      <p class="menu-title" (click)="toggleModule('reports')" [class.expandable]="true">
+        REPORTS
+        <i class="pi" [ngClass]="{'pi-angle-down': openModule==='reports', 'pi-angle-right': openModule!=='reports'}"></i>
+      </p>
 
-                <a routerLink="/issue" routerLinkActive="active" (click)="onNavClick()">
-                    <i class="pi pi-box"></i>
-                    <span class="menu-text">Issue item Verification</span>
-                </a>
+      <div *ngIf="openModule === 'reports'" class="menu-group">
+        <a routerLink="/reports/reports-and-dashboards" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-chart-line"></i>
+          <span class="menu-text">Reports & Dashboards</span>
+        </a>
+      </div>
+      <!-- MACHINE -->
+      <p class="menu-title" (click)="toggleModule('machine')" [class.expandable]="true">
+        MACHINE
+        <i class="pi" [ngClass]="{'pi-angle-down': openModule==='machine', 'pi-angle-right': openModule!=='machine'}"></i>
+      </p>  
+        
+      <div *ngIf="openModule === 'machine'" class="menu-group">
+        <a routerLink="/machine/machine-master" routerLinkActive="active" (click)="onNavClick()">
+          <i class="pi pi-cog"></i>
+          <span class="menu-text">Machine Master</span>
+        </a>
+    </div>      
 
-            </div>
-
-        </div>
-    </div>
-
-    <!-- BOTTOM SECTION -->
-    <div class="app-sidebar-bottom" *ngIf="!isCollapsed">
-        <div class="app-sidebar-version">
-            Version 2.0
-        </div>
-    </div>
+  </div>
 
 </div>

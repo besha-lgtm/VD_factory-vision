@@ -7,7 +7,7 @@ import { Component, OnInit } from '@angular/core';
   styleUrl: './app.component.css'
 })
 export class AppComponent implements OnInit {
-  title = 'hmep_portal';
+  title = 'visipak_ERP';
   ngOnInit(): void {
     // ✅ TEMPORARY LOGIN SIMULATION
     localStorage.setItem('currentRoleId', 'r3'); // 👈 change role here

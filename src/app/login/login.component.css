@@ -881,30 +881,3 @@
     margin-bottom: 12px;
   }
 }
-
-/* Back to Dashboard Link Styling */
-.back-dashboard-row {
-  display: flex;
-  justify-content: flex-start;
-  margin-bottom: 16px;
-}
-
-.back-dashboard-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12.5px;
-  color: #64748b;
-  text-decoration: none;
-  font-weight: 600;
-  transition: color 0.2s ease;
-  cursor: pointer;
-}
-
-.back-dashboard-link:hover {
-  color: #0ea5e9;
-}
-
-.back-dashboard-link i {
-  font-size: 11px;
-}

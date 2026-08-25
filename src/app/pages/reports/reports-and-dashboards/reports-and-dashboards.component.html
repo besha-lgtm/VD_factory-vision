@@ -1,0 +1,348 @@
+<div class="users-roles-container">
+
+  <!-- PAGE HEADER -->
+  <div class="page-title-section">
+    <h1 class="page-title">Reports & Dashboards</h1>
+    <p class="page-subtitle">Operational visibility for management and department users — jobs, stock, QC, dispatch and production.</p>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div *ngFor="let kpi of kpis" class="kpi-card">
+      <div class="kpi-info">
+        <span class="kpi-label">{{ kpi.label }}</span>
+        <span class="kpi-value">{{ kpi.value }}</span>
+      </div>
+      <div class="kpi-icon-wrapper" [ngClass]="kpi.colorClass">
+        <i [class]="kpi.icon"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPORT FILTER BAR -->
+  <div class="card-wrapper" style="margin-bottom: 16px; padding: 14px 18px;">
+    <div class="report-filter-bar">
+
+      <!-- REPORT TYPE TABS -->
+      <div class="report-tab-group">
+        <button
+          *ngFor="let tab of reportTabs"
+          class="report-tab-btn"
+          [class.active]="activeTab === tab.key"
+          (click)="switchTab(tab.key)">
+          <i [class]="tab.icon" style="margin-right: 6px;"></i>{{ tab.label }}
+        </button>
+      </div>
+
+      <!-- DATE RANGE & EXPORT -->
+      <div class="report-filter-actions">
+        <div class="form-field" style="margin: 0;">
+          <input
+            type="date"
+            name="fromDate"
+            class="form-input-control"
+            [(ngModel)]="filterFromDate"
+            placeholder="From Date" />
+        </div>
+        <span style="color: var(--color-text-tertiary); font-size: 12px; align-self: center;">to</span>
+        <div class="form-field" style="margin: 0;">
+          <input
+            type="date"
+            name="toDate"
+            class="form-input-control"
+            [(ngModel)]="filterToDate"
+            placeholder="To Date" />
+        </div>
+        <button
+          pButton
+          type="button"
+          icon="pi pi-filter"
+          label="Apply"
+          class="p-button-sm btn-report-apply"
+          (click)="applyFilter()">
+        </button>
+        <button
+          pButton
+          type="button"
+          icon="pi pi-file-excel"
+          label="Export Excel"
+          class="p-button-sm btn-report-excel"
+          (click)="exportExcel()">
+        </button>
+        <button
+          pButton
+          type="button"
+          icon="pi pi-file-pdf"
+          label="Export PDF"
+          class="p-button-sm btn-report-pdf"
+          (click)="exportPDF()">
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== TAB: PENDING JOBS ===================== -->
+  <div *ngIf="activeTab === 'jobs'" class="table-card card-wrapper">
+    <div class="card-header-with-search">
+      <div class="card-header-text">
+        <h3 class="card-title">Pending Jobs Report</h3>
+        <p class="card-subtitle">Open daily jobs by priority and customer</p>
+      </div>
+      <div class="table-search-bar">
+        <span class="search-input-wrapper">
+          <i class="pi pi-search search-icon"></i>
+          <input pInputText type="text" (input)="dtJobs.filterGlobal($any($event.target).value, 'contains')"
+            placeholder="Search..." class="search-input" />
+        </span>
+      </div>
+    </div>
+    <div class="table-inner-container">
+      <p-table #dtJobs [value]="jobsReport" [paginator]="true" [rows]="7"
+        [globalFilterFields]="['jobId','poNo','customer','itemCode','priority','status']"
+        responsiveLayout="scroll" styleClass="p-datatable-sm custom-primeng-table">
+        <ng-template pTemplate="header">
+          <tr>
+            <th pSortableColumn="jobId" class="col-userid"><div class="header-cell-content"><span>JOB ID</span><p-sortIcon field="jobId"></p-sortIcon></div></th>
+            <th pSortableColumn="poNo" class="col-role"><div class="header-cell-content"><span>PO NO</span><p-sortIcon field="poNo"></p-sortIcon></div></th>
+            <th pSortableColumn="customer" class="col-name"><div class="header-cell-content"><span>CUSTOMER</span><p-sortIcon field="customer"></p-sortIcon></div></th>
+            <th pSortableColumn="itemCode" class="col-dept"><div class="header-cell-content"><span>ITEM</span><p-sortIcon field="itemCode"></p-sortIcon></div></th>
+            <th pSortableColumn="reqQty" class="col-dept"><div class="header-cell-content"><span>REQ QTY</span><p-sortIcon field="reqQty"></p-sortIcon></div></th>
+            <th pSortableColumn="assignedQty" class="col-dept"><div class="header-cell-content"><span>ASS QTY</span><p-sortIcon field="assignedQty"></p-sortIcon></div></th>
+            <th pSortableColumn="priority" class="col-status"><div class="header-cell-content"><span>PRIORITY</span><p-sortIcon field="priority"></p-sortIcon></div></th>
+            <th pSortableColumn="status" class="col-status"><div class="header-cell-content"><span>STATUS</span><p-sortIcon field="status"></p-sortIcon></div></th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td class="userid-cell col-userid"><div class="cell-wrapper">{{ row.jobId }}</div></td>
+            <td class="col-role"><div class="cell-wrapper"><span class="role-badge">{{ row.poNo }}</span></div></td>
+            <td class="name-cell col-name"><div class="cell-wrapper">{{ row.customer }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper"><span class="dept-badge">{{ row.itemCode }}</span></div></td>
+            <td class="col-dept"><div class="cell-wrapper">{{ row.reqQty | number }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper">{{ row.assignedQty | number }}</div></td>
+            <td class="col-status"><div class="cell-wrapper">
+              <span class="status-badge" [ngClass]="{'status-active': row.priority==='P1','status-badge-warn': row.priority==='P2','status-inactive': row.priority==='P3'}">{{ row.priority }}</span>
+            </div></td>
+            <td class="col-status"><div class="cell-wrapper">
+              <span class="status-badge" [ngClass]="{'status-active': row.status==='Closed','status-badge-warn': row.status==='Open'}">{{ row.status }}</span>
+            </div></td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr><td colspan="8" class="empty-table-cell"><i class="pi pi-calendar empty-icon"></i><p>No job records found.</p></td></tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+
+  <!-- ===================== TAB: STOCK REPORT ===================== -->
+  <div *ngIf="activeTab === 'stock'" class="table-card card-wrapper">
+    <div class="card-header-with-search">
+      <div class="card-header-text">
+        <h3 class="card-title">Stock Report</h3>
+        <p class="card-subtitle">FG and raw material availability with reorder alerts</p>
+      </div>
+      <div class="table-search-bar">
+        <span class="search-input-wrapper">
+          <i class="pi pi-search search-icon"></i>
+          <input pInputText type="text" (input)="dtStock.filterGlobal($any($event.target).value, 'contains')"
+            placeholder="Search..." class="search-input" />
+        </span>
+      </div>
+    </div>
+    <div class="table-inner-container">
+      <p-table #dtStock [value]="stockReport" [paginator]="true" [rows]="7"
+        [globalFilterFields]="['material','itemCode','stockType','gsm','shade','status']"
+        responsiveLayout="scroll" styleClass="p-datatable-sm custom-primeng-table">
+        <ng-template pTemplate="header">
+          <tr>
+            <th pSortableColumn="material" class="col-name"><div class="header-cell-content"><span>MATERIAL</span><p-sortIcon field="material"></p-sortIcon></div></th>
+            <th pSortableColumn="stockType" class="col-dept"><div class="header-cell-content"><span>TYPE</span><p-sortIcon field="stockType"></p-sortIcon></div></th>
+            <th pSortableColumn="gsm" class="col-dept"><div class="header-cell-content"><span>GSM</span><p-sortIcon field="gsm"></p-sortIcon></div></th>
+            <th pSortableColumn="size" class="col-dept"><div class="header-cell-content"><span>SIZE</span><p-sortIcon field="size"></p-sortIcon></div></th>
+            <th pSortableColumn="availableQty" class="col-dept"><div class="header-cell-content"><span>AVAILABLE</span><p-sortIcon field="availableQty"></p-sortIcon></div></th>
+            <th pSortableColumn="reorderLevel" class="col-dept"><div class="header-cell-content"><span>REORDER LVL</span><p-sortIcon field="reorderLevel"></p-sortIcon></div></th>
+            <th pSortableColumn="status" class="col-status"><div class="header-cell-content"><span>STATUS</span><p-sortIcon field="status"></p-sortIcon></div></th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td class="name-cell col-name"><div class="cell-wrapper">{{ row.material }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper"><span class="dept-badge">{{ row.stockType }}</span></div></td>
+            <td class="col-dept"><div class="cell-wrapper">{{ row.gsm }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper">{{ row.size }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper">{{ row.availableQty | number }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper">{{ row.reorderLevel | number }}</div></td>
+            <td class="col-status"><div class="cell-wrapper">
+              <span class="status-badge" [ngClass]="{'status-active': row.status==='OK','status-inactive': row.status==='Reorder','status-badge-warn': row.status==='Low'}">{{ row.status }}</span>
+            </div></td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr><td colspan="7" class="empty-table-cell"><i class="pi pi-box empty-icon"></i><p>No stock records found.</p></td></tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+
+  <!-- ===================== TAB: QC REPORT ===================== -->
+  <div *ngIf="activeTab === 'qc'" class="table-card card-wrapper">
+    <div class="card-header-with-search">
+      <div class="card-header-text">
+        <h3 class="card-title">QC Report</h3>
+        <p class="card-subtitle">Pass / fail / rework analysis across all inspections</p>
+      </div>
+      <div class="table-search-bar">
+        <span class="search-input-wrapper">
+          <i class="pi pi-search search-icon"></i>
+          <input pInputText type="text" (input)="dtQC.filterGlobal($any($event.target).value, 'contains')"
+            placeholder="Search..." class="search-input" />
+        </span>
+      </div>
+    </div>
+    <div class="table-inner-container">
+      <p-table #dtQC [value]="qcReport" [paginator]="true" [rows]="7"
+        [globalFilterFields]="['qcId','jobId','qcType','inspector','result']"
+        responsiveLayout="scroll" styleClass="p-datatable-sm custom-primeng-table">
+        <ng-template pTemplate="header">
+          <tr>
+            <th pSortableColumn="qcId" class="col-userid"><div class="header-cell-content"><span>QC ID</span><p-sortIcon field="qcId"></p-sortIcon></div></th>
+            <th pSortableColumn="qcDate" class="col-dept"><div class="header-cell-content"><span>DATE</span><p-sortIcon field="qcDate"></p-sortIcon></div></th>
+            <th pSortableColumn="jobId" class="col-role"><div class="header-cell-content"><span>JOB</span><p-sortIcon field="jobId"></p-sortIcon></div></th>
+            <th pSortableColumn="qcType" class="col-name"><div class="header-cell-content"><span>QC TYPE</span><p-sortIcon field="qcType"></p-sortIcon></div></th>
+            <th pSortableColumn="gsm" class="col-dept"><div class="header-cell-content"><span>GSM</span><p-sortIcon field="gsm"></p-sortIcon></div></th>
+            <th pSortableColumn="bf" class="col-dept"><div class="header-cell-content"><span>BF</span><p-sortIcon field="bf"></p-sortIcon></div></th>
+            <th pSortableColumn="inspector" class="col-dept"><div class="header-cell-content"><span>INSPECTOR</span><p-sortIcon field="inspector"></p-sortIcon></div></th>
+            <th pSortableColumn="result" class="col-status"><div class="header-cell-content"><span>RESULT</span><p-sortIcon field="result"></p-sortIcon></div></th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td class="userid-cell col-userid"><div class="cell-wrapper">{{ row.qcId }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper">{{ row.qcDate }}</div></td>
+            <td class="col-role"><div class="cell-wrapper"><span class="role-badge">{{ row.jobId }}</span></div></td>
+            <td class="name-cell col-name"><div class="cell-wrapper">{{ row.qcType }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper">{{ row.gsm }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper">{{ row.bf }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper"><span class="dept-badge">{{ row.inspector }}</span></div></td>
+            <td class="col-status"><div class="cell-wrapper">
+              <span class="status-badge" [ngClass]="{'status-active': row.result==='Pass','status-inactive': row.result==='Fail','status-badge-warn': row.result==='Rework'}">{{ row.result }}</span>
+            </div></td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr><td colspan="8" class="empty-table-cell"><i class="pi pi-check-square empty-icon"></i><p>No QC records found.</p></td></tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+
+  <!-- ===================== TAB: DISPATCH REPORT ===================== -->
+  <div *ngIf="activeTab === 'dispatch'" class="table-card card-wrapper">
+    <div class="card-header-with-search">
+      <div class="card-header-text">
+        <h3 class="card-title">Dispatch Report</h3>
+        <p class="card-subtitle">Daily dispatch and e-way bill tracking</p>
+      </div>
+      <div class="table-search-bar">
+        <span class="search-input-wrapper">
+          <i class="pi pi-search search-icon"></i>
+          <input pInputText type="text" (input)="dtDispatch.filterGlobal($any($event.target).value, 'contains')"
+            placeholder="Search..." class="search-input" />
+        </span>
+      </div>
+    </div>
+    <div class="table-inner-container">
+      <p-table #dtDispatch [value]="dispatchReport" [paginator]="true" [rows]="7"
+        [globalFilterFields]="['dispatchId','poNo','customer','vehicleNo','status']"
+        responsiveLayout="scroll" styleClass="p-datatable-sm custom-primeng-table">
+        <ng-template pTemplate="header">
+          <tr>
+            <th pSortableColumn="dispatchId" class="col-userid"><div class="header-cell-content"><span>DISP ID</span><p-sortIcon field="dispatchId"></p-sortIcon></div></th>
+            <th pSortableColumn="dispatchDate" class="col-dept"><div class="header-cell-content"><span>DATE</span><p-sortIcon field="dispatchDate"></p-sortIcon></div></th>
+            <th pSortableColumn="poNo" class="col-role"><div class="header-cell-content"><span>PO NO</span><p-sortIcon field="poNo"></p-sortIcon></div></th>
+            <th pSortableColumn="customer" class="col-name"><div class="header-cell-content"><span>CUSTOMER</span><p-sortIcon field="customer"></p-sortIcon></div></th>
+            <th pSortableColumn="itemCode" class="col-dept"><div class="header-cell-content"><span>ITEM</span><p-sortIcon field="itemCode"></p-sortIcon></div></th>
+            <th pSortableColumn="dispatchQty" class="col-dept"><div class="header-cell-content"><span>QTY</span><p-sortIcon field="dispatchQty"></p-sortIcon></div></th>
+            <th pSortableColumn="vehicleNo" class="col-dept"><div class="header-cell-content"><span>VEHICLE</span><p-sortIcon field="vehicleNo"></p-sortIcon></div></th>
+            <th pSortableColumn="ewayBill" class="col-dept"><div class="header-cell-content"><span>E-WAY BILL</span><p-sortIcon field="ewayBill"></p-sortIcon></div></th>
+            <th pSortableColumn="status" class="col-status"><div class="header-cell-content"><span>STATUS</span><p-sortIcon field="status"></p-sortIcon></div></th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td class="userid-cell col-userid"><div class="cell-wrapper">{{ row.dispatchId }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper">{{ row.dispatchDate }}</div></td>
+            <td class="col-role"><div class="cell-wrapper"><span class="role-badge">{{ row.poNo }}</span></div></td>
+            <td class="name-cell col-name"><div class="cell-wrapper">{{ row.customer }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper"><span class="dept-badge">{{ row.itemCode }}</span></div></td>
+            <td class="col-dept"><div class="cell-wrapper">{{ row.dispatchQty | number }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper">{{ row.vehicleNo }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper">{{ row.ewayBill || '—' }}</div></td>
+            <td class="col-status"><div class="cell-wrapper">
+              <span class="status-badge" [ngClass]="{'status-active': row.status==='Closed','status-badge-warn': row.status==='Planned' || row.status==='In Transit','status-inactive': row.status==='Cancelled'}">{{ row.status }}</span>
+            </div></td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr><td colspan="9" class="empty-table-cell"><i class="pi pi-truck empty-icon"></i><p>No dispatch records found.</p></td></tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+
+  <!-- ===================== TAB: PRODUCTION REPORT ===================== -->
+  <div *ngIf="activeTab === 'production'" class="table-card card-wrapper">
+    <div class="card-header-with-search">
+      <div class="card-header-text">
+        <h3 class="card-title">Production Report</h3>
+        <p class="card-subtitle">Stage-wise output and wastage summary</p>
+      </div>
+      <div class="table-search-bar">
+        <span class="search-input-wrapper">
+          <i class="pi pi-search search-icon"></i>
+          <input pInputText type="text" (input)="dtProd.filterGlobal($any($event.target).value, 'contains')"
+            placeholder="Search..." class="search-input" />
+        </span>
+      </div>
+    </div>
+    <div class="table-inner-container">
+      <p-table #dtProd [value]="productionReport" [paginator]="true" [rows]="7"
+        [globalFilterFields]="['execId','jobId','stage','operator','status']"
+        responsiveLayout="scroll" styleClass="p-datatable-sm custom-primeng-table">
+        <ng-template pTemplate="header">
+          <tr>
+            <th pSortableColumn="execId" class="col-userid"><div class="header-cell-content"><span>EXEC ID</span><p-sortIcon field="execId"></p-sortIcon></div></th>
+            <th pSortableColumn="execDate" class="col-dept"><div class="header-cell-content"><span>DATE</span><p-sortIcon field="execDate"></p-sortIcon></div></th>
+            <th pSortableColumn="jobId" class="col-role"><div class="header-cell-content"><span>JOB</span><p-sortIcon field="jobId"></p-sortIcon></div></th>
+            <th pSortableColumn="stage" class="col-name"><div class="header-cell-content"><span>STAGE</span><p-sortIcon field="stage"></p-sortIcon></div></th>
+            <th pSortableColumn="outputQty" class="col-dept"><div class="header-cell-content"><span>OUTPUT</span><p-sortIcon field="outputQty"></p-sortIcon></div></th>
+            <th pSortableColumn="wastageQty" class="col-dept"><div class="header-cell-content"><span>WASTAGE</span><p-sortIcon field="wastageQty"></p-sortIcon></div></th>
+            <th pSortableColumn="operator" class="col-dept"><div class="header-cell-content"><span>OPERATOR</span><p-sortIcon field="operator"></p-sortIcon></div></th>
+            <th pSortableColumn="status" class="col-status"><div class="header-cell-content"><span>STATUS</span><p-sortIcon field="status"></p-sortIcon></div></th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td class="userid-cell col-userid"><div class="cell-wrapper">{{ row.execId }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper">{{ row.execDate }}</div></td>
+            <td class="col-role"><div class="cell-wrapper"><span class="role-badge">{{ row.jobId }}</span></div></td>
+            <td class="name-cell col-name"><div class="cell-wrapper">{{ row.stage }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper">{{ row.outputQty | number }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper">{{ row.wastageQty | number }}</div></td>
+            <td class="col-dept"><div class="cell-wrapper"><span class="dept-badge">{{ row.operator }}</span></div></td>
+            <td class="col-status"><div class="cell-wrapper">
+              <span class="status-badge" [ngClass]="{'status-active': row.status==='Done','status-badge-warn': row.status==='Running','status-inactive': row.status==='Pending'}">{{ row.status }}</span>
+            </div></td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr><td colspan="8" class="empty-table-cell"><i class="pi pi-cog empty-icon"></i><p>No production records found.</p></td></tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+
+</div>
+
+<p-toast></p-toast>

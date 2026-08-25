@@ -1,0 +1,855 @@
+<div class="users-roles-container">
+
+  <!-- PAGE HEADER -->
+  <div class="page-title-section">
+    <h1 class="page-title">Employee Master</h1>
+    <p class="page-subtitle">Manage employee profiles, department assignments, shifts, skills and bank details.</p>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div *ngFor="let kpi of kpis" class="kpi-card">
+      <div class="kpi-info">
+        <span class="kpi-label">{{ kpi.label }}</span>
+        <span class="kpi-value">{{ kpi.value }}</span>
+      </div>
+      <div class="kpi-icon-wrapper" [ngClass]="kpi.colorClass">
+        <i [class]="kpi.icon"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- FULL-WIDTH EMPLOYEES TABLE -->
+  <div class="table-card card-wrapper">
+    <div class="card-header-with-search">
+      <div class="card-header-text">
+        <h3 class="card-title">Employees</h3>
+        <p class="card-subtitle">All shop floor and office staff records</p>
+      </div>
+      <div class="table-toolbar">
+        <div class="table-search-bar">
+          <span class="search-input-wrapper">
+            <i class="pi pi-search search-icon"></i>
+            <input
+              pInputText
+              type="text"
+              (input)="dt.filterGlobal($any($event.target).value, 'contains')"
+              placeholder="Search by name, dept, skill..."
+              class="search-input" />
+          </span>
+        </div>
+        <button
+          pButton
+          type="button"
+          icon="pi pi-plus"
+          label="Add Employee"
+          class="p-button-sm create-emp-btn"
+          (click)="openCreateModal()">
+        </button>
+      </div>
+    </div>
+
+    <!-- DEPARTMENT FILTER PILLS -->
+    <div class="emp-dept-filter-bar">
+      <button
+        *ngFor="let dept of deptFilterOptions"
+        class="emp-dept-pill"
+        [class.active]="activeDeptFilter === dept"
+        (click)="filterByDept(dept)">
+        {{ dept }}
+      </button>
+    </div>
+
+    <div class="table-inner-container">
+      <p-table
+        #dt
+        [value]="filteredEmployees"
+        [paginator]="true"
+        [rows]="8"
+        [globalFilterFields]="['empId','empCode','empName','department','designation','shift','employeeType','status']"
+        responsiveLayout="scroll"
+        styleClass="p-datatable-sm custom-primeng-table users-pro-table">
+
+        <ng-template pTemplate="header">
+          <tr>
+            <th pSortableColumn="empId">
+              <div class="header-cell-content"><span>EMP ID</span><p-sortIcon field="empId"></p-sortIcon></div>
+            </th>
+            <th pSortableColumn="empName" >
+              <div class="header-cell-content"><span>NAME</span><p-sortIcon field="empName"></p-sortIcon></div>
+            </th>
+            <th pSortableColumn="department" >
+              <div class="header-cell-content"><span>DEPT</span><p-sortIcon field="department"></p-sortIcon></div>
+            </th>
+            <th pSortableColumn="designation" >
+              <div class="header-cell-content"><span>DESIGNATION</span><p-sortIcon field="designation"></p-sortIcon></div>
+            </th>
+            <th pSortableColumn="shift" >
+              <div class="header-cell-content"><span>SHIFT</span><p-sortIcon field="shift"></p-sortIcon></div>
+            </th>
+            <th pSortableColumn="employeeType" >
+              <div class="header-cell-content"><span>TYPE</span><p-sortIcon field="employeeType"></p-sortIcon></div>
+            </th>
+            <th pSortableColumn="status" >
+              <div class="header-cell-content"><span>STATUS</span><p-sortIcon field="status"></p-sortIcon></div>
+            </th>
+            <th  style="text-align:center;">ACTIONS</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-emp>
+          <tr>
+            <!-- EMP ID -->
+            <td >
+              <div class="cell-wrapper">
+                <span class="uid-text">{{ emp.empId }}</span>
+              </div>
+            </td>
+
+            <!-- NAME + EMP CODE (with avatar, matching users table) -->
+            <td class="name-cell">
+              <div class="cell-wrapper employee-cell">
+                <div class="employee-avatar" >
+                  {{ getInitials(emp.empName) }}
+                </div>
+                <div class="employee-details">
+                  <span class="employee-name">{{ emp.empName }}</span>
+                  <span class="employee-code">{{ emp.empCode }}</span>
+                </div>
+              </div>
+            </td>
+
+            <td>
+              <div class="cell-wrapper">
+                <span class="dept-badge">{{ emp.department }}</span>
+              </div>
+            </td>
+
+            <td class="col-name">
+              <div class="cell-wrapper">{{ emp.designation }}</div>
+            </td>
+
+            <!-- SHIFT BADGE -->
+            <td>
+              <div class="cell-wrapper">
+                <span class="shift-badge"
+                  [ngClass]="{
+                    'shift-a': emp.shift === 'A',
+                    'shift-b': emp.shift === 'B',
+                    'shift-c': emp.shift === 'C',
+                    'shift-gen': emp.shift === 'General'
+                  }">
+                  {{ emp.shift }}
+                </span>
+              </div>
+            </td>
+
+            <!-- TYPE BADGE -->
+            <td>
+              <div class="cell-wrapper">
+                <span class="role-badge">{{ emp.employeeType }}</span>
+              </div>
+            </td>
+
+            <!-- STATUS -->
+            <td >
+              <div class="cell-wrapper">
+                <!-- <span class="status-badge"
+                  [ngClass]="emp.status === 'Active' ? 'status-active' : 'status-inactive'">
+                  {{ emp.status }}
+                </span> -->
+                   <span class="status-badge" [ngClass]="emp.status === 'Active' ? 'status-active' : 'status-inactive'">
+                  <i [class]="emp.status === 'Active' ? 'pi pi-check-circle' : 'pi pi-times-circle'"></i>
+                  {{ emp.status }}
+                </span>
+              </div>
+            </td>
+
+            <!-- ACTIONS -->
+            <td class="actions-cell">
+              <div class="cell-wrapper">
+                <div class="action-buttons-group">
+                    <button
+        pButton type="button" icon="pi pi-eye"
+        class="p-button-text p-button-rounded p-button-sm action-btn view-btn-icon"
+        (click)="viewEmployee(emp)" title="View Employee">
+      </button>
+                  <button
+                    pButton type="button" icon="pi pi-pencil"
+                    class="p-button-text p-button-rounded p-button-sm action-btn edit-btn-icon"
+                    (click)="editEmployee(emp)" title="Edit Employee">
+                  </button>
+                  <button
+                    pButton type="button" icon="pi pi-trash"
+                    class="p-button-text p-button-rounded p-button-danger p-button-sm action-btn delete-btn-icon"
+                    (click)="confirmDelete($event, emp)" title="Delete">
+                  </button>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="8" class="empty-table-cell">
+              <i class="pi pi-users empty-icon"></i>
+              <p>No employees found.</p>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+
+</div>
+<!-- ============================================
+     MODAL: VIEW EMPLOYEE DETAILS (Read-only)
+     ============================================ -->
+<p-dialog
+  [(visible)]="showViewModal"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="emp-view-dialog"
+  [style]="{ width: '640px', maxWidth: '95vw' }">
+
+  <ng-template pTemplate="header">
+  <!-- Replace the header div contents with this -->
+<div class="modal-header-row">
+  <div class="employee-avatar" [style.background]="viewEmp.avatarColor">
+    {{ getInitials(viewEmp.empName) }}
+  </div>
+  <div class="emp-header-info">
+    <div class="emp-header-name">{{ viewEmp.empName }}</div>
+    <div class="emp-header-meta">{{ viewEmp.empCode }} &nbsp;|&nbsp; {{ viewEmp.designation }}</div>
+  </div>
+  <span class="status-badge" [ngClass]="viewEmp.status === 'Active' ? 'status-active' : 'status-inactive'">
+    {{ viewEmp.status }}
+  </span>
+</div>
+  </ng-template>
+
+  <ng-template pTemplate="content">
+    <!-- Tab Navigation -->
+    <div class="emp-form-tabs">
+      <button *ngFor="let tab of formTabs" class="emp-tab-btn"
+        [class.active]="activeViewTab === tab.key"
+        (click)="activeViewTab = tab.key">
+        <i [class]="tab.icon"></i> {{ tab.label }}
+      </button>
+    </div>
+
+    <!-- Personal Tab -->
+    <ng-container *ngIf="activeViewTab === 'personal'">
+      <div class="view-detail-grid">
+        <div class="view-field"><span class="view-label">Employee ID</span><span class="view-value">{{ viewEmp.empId }}</span></div>
+        <div class="view-field"><span class="view-label">Employee Code</span><span class="view-value">{{ viewEmp.empCode }}</span></div>
+        <div class="view-field"><span class="view-label">Full Name</span><span class="view-value">{{ viewEmp.empName }}</span></div>
+        <div class="view-field"><span class="view-label">Father's Name</span><span class="view-value">{{ viewEmp.fatherName || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Date of Birth</span><span class="view-value">{{ viewEmp.dob || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Gender</span><span class="view-value">{{ viewEmp.gender }}</span></div>
+        <div class="view-field"><span class="view-label">Blood Group</span><span class="view-value">{{ viewEmp.bloodGroup || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Mobile</span><span class="view-value">{{ viewEmp.mobile || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Alternate Mobile</span><span class="view-value">{{ viewEmp.altMobile || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Email</span><span class="view-value">{{ viewEmp.email || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Aadhaar No</span><span class="view-value">{{ viewEmp.aadhaar || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">PAN</span><span class="view-value">{{ viewEmp.pan || '—' }}</span></div>
+        <div class="view-field">
+          <span class="view-label">Residential Address</span>
+          <span class="view-value">{{ viewEmp.resAddress || '—' }}</span>
+        </div>
+        <div class="view-field">
+          <span class="view-label">Permanent Address</span>
+          <span class="view-value">{{ viewEmp.permAddress || '—' }}</span>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Career & Education Tab -->
+    <ng-container *ngIf="activeViewTab === 'experience'">
+      <div class="view-detail-grid">
+        <div class="view-field"><span class="view-label">Education</span><span class="view-value">{{ viewEmp.education || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Previous Experience</span><span class="view-value">{{ viewEmp.prevExperience ? 'Yes' : 'No' }}</span></div>
+        <div class="view-field" *ngIf="viewEmp.prevExperience"><span class="view-label">Years of Experience</span><span class="view-value">{{ viewEmp.yearsWorked || 0 }} Years</span></div>
+        
+        <div class="view-field full-width" style="margin-top: 10px;">
+          <span class="view-label">ATTACHMENTS</span>
+        </div>
+        <div class="view-field">
+          <span class="view-label">Resume / CV</span>
+          <span class="view-value">
+            <span *ngIf="viewEmp.resumeFile" class="attachment-view-badge">
+              <i class="pi pi-file-pdf"></i> {{ getFileName(viewEmp.resumeFile) }}
+            </span>
+            <span *ngIf="!viewEmp.resumeFile">—</span>
+          </span>
+        </div>
+        <div class="view-field">
+          <span class="view-label">Education Docs</span>
+          <span class="view-value">
+            <span *ngIf="viewEmp.educationDocs" class="attachment-view-badge">
+              <i class="pi pi-file"></i> {{ getFileName(viewEmp.educationDocs) }}
+            </span>
+            <span *ngIf="!viewEmp.educationDocs">—</span>
+          </span>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Job Details Tab -->
+    <ng-container *ngIf="activeViewTab === 'job'">
+      <div class="view-detail-grid">
+        <div class="view-field"><span class="view-label">Date of Joining</span><span class="view-value">{{ viewEmp.doj || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Employee Type</span><span class="view-value">{{ viewEmp.employeeType }}</span></div>
+        <div class="view-field"><span class="view-label">Department</span><span class="view-value">{{ viewEmp.department }}</span></div>
+        <div class="view-field"><span class="view-label">Designation</span><span class="view-value">{{ viewEmp.designation }}</span></div>
+        <div class="view-field"><span class="view-label">Shift</span><span class="view-value">{{ viewEmp.shift }}</span></div>
+        <div class="view-field"><span class="view-label">Reporting Manager</span><span class="view-value">{{ viewEmp.reportingManager || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Skill / Trade</span><span class="view-value">{{ viewEmp.skill || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Machine Assigned</span><span class="view-value">{{ viewEmp.machineAssigned || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Basic Salary (₹)</span><span class="view-value">{{ viewEmp.basicSalary != null ? (viewEmp.basicSalary | number) : '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Attendance Type</span><span class="view-value">{{ viewEmp.attendanceType }}</span></div>
+        <div class="view-field"><span class="view-label">Work Location</span><span class="view-value">{{ viewEmp.workLocation }}</span></div>
+      </div>
+    </ng-container>
+
+    <!-- Bank & Statutory Tab -->
+    <ng-container *ngIf="activeViewTab === 'bank'">
+      <div class="emp-section-divider"><i class="pi pi-credit-card"></i> Bank Details</div>
+      <div class="view-detail-grid">
+        <div class="view-field"><span class="view-label">Account Holder</span><span class="view-value">{{ viewEmp.bankDetails.accountHolder || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Bank Name</span><span class="view-value">{{ viewEmp.bankDetails.bankName || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Account No</span><span class="view-value">{{ viewEmp.bankDetails.accountNo || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">IFSC Code</span><span class="view-value">{{ viewEmp.bankDetails.ifsc || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Account Type</span><span class="view-value">{{ viewEmp.bankDetails.accountType || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Branch</span><span class="view-value">{{ viewEmp.bankDetails.branch || '—' }}</span></div>
+      </div>
+      <div class="emp-section-divider" style="margin-top:8px;"><i class="pi pi-shield"></i> Statutory Details</div>
+      <div class="view-detail-grid">
+        <div class="view-field"><span class="view-label">PF Account No</span><span class="view-value">{{ viewEmp.statutory.pfNo || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">ESI No</span><span class="view-value">{{ viewEmp.statutory.esiNo || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">UAN</span><span class="view-value">{{ viewEmp.statutory.uan || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">PF Applicable</span><span class="view-value">{{ viewEmp.statutory.pfApplicable }}</span></div>
+        <div class="view-field"><span class="view-label">ESI Applicable</span><span class="view-value">{{ viewEmp.statutory.esiApplicable }}</span></div>
+        <div class="view-field"><span class="view-label">Gratuity Applicable</span><span class="view-value">{{ viewEmp.statutory.gratuityApplicable }}</span></div>
+      </div>
+    </ng-container>
+  </ng-template>
+
+  <ng-template pTemplate="footer">
+    <button pButton type="button" label="Edit Employee" icon="pi pi-pencil"
+      class="p-button-sm p-button-outlined"
+      (click)="editFromView()">
+    </button>
+    <button pButton type="button" label="Close" icon="pi pi-times"
+      class="p-button-sm p-button-text"
+      (click)="showViewModal = false">
+    </button>
+  </ng-template>
+
+</p-dialog>
+
+<!-- ============================================
+     MODAL: ADD / EDIT EMPLOYEE
+     ============================================ -->
+<p-dialog
+  [(visible)]="showEmpModal"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '780px', maxWidth: '95vw' }"
+  styleClass="emp-form-dialog"
+  (onHide)="onModalHide()">
+
+  <!-- Dialog Header -->
+  <ng-template pTemplate="header">
+    <div class="modal-header-content">
+      <span class="modal-title-icon">
+        <i [class]="isEditMode ? 'pi pi-pencil' : 'pi pi-user-plus'"></i>
+      </span>
+      <div>
+        <h3 class="modal-title-text">{{ isEditMode ? 'Update Employee' : 'Add Employee' }}</h3>
+        <p class="modal-subtitle-text">{{ isEditMode ? 'Modify employee record and assignment' : 'Register new employee with job and bank details' }}</p>
+      </div>
+    </div>
+  </ng-template>
+
+  <!-- Dialog Body -->
+  <ng-template pTemplate="content">
+
+    <!-- FORM SECTION TABS -->
+    <div class="emp-form-tabs">
+      <button
+        *ngFor="let tab of formTabs"
+        class="emp-form-tab"
+        [class.active]="activeFormTab === tab.key"
+        (click)="switchFormTab(tab.key)"
+        type="button">
+        <i [class]="tab.icon"></i>
+        <span>{{ tab.label }}</span>
+      </button>
+    </div>
+
+    <!-- TAB CONTENT -->
+    <form #empForm="ngForm" class="user-form-content">
+      <div class="form-fields-wrapper">
+
+        <!-- ══ TAB 1: PERSONAL DETAILS ══ -->
+        <ng-container *ngIf="activeFormTab === 'personal'">
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">EMP ID</label>
+              <input type="text" name="empId" class="form-input-control disabled-input"
+                [value]="currentEmp.empId" disabled />
+            </div>
+            <div class="form-field">
+              <label class="field-label">EMP CODE <span class="required-star">*</span></label>
+              <input type="text" name="empCode"
+                #empCodeInput="ngModel"
+                [class.um-input-error]="empCodeInput.invalid && (empCodeInput.dirty || empCodeInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="e.g. EMP010"
+                [(ngModel)]="currentEmp.empCode" required />
+              <div *ngIf="empCodeInput.invalid && (empCodeInput.dirty || empCodeInput.touched || formSubmitted)" class="um-error-text">Emp Code is required.</div>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">FULL NAME <span class="required-star">*</span></label>
+              <input type="text" name="empName"
+                #empNameInput="ngModel"
+                [class.um-input-error]="empNameInput.invalid && (empNameInput.dirty || empNameInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="Full name as per Aadhaar"
+                [(ngModel)]="currentEmp.empName" required />
+              <div *ngIf="empNameInput.invalid && (empNameInput.dirty || empNameInput.touched || formSubmitted)" class="um-error-text">Name is required.</div>
+            </div>
+            <div class="form-field">
+              <label class="field-label">FATHER / HUSBAND NAME</label>
+              <input type="text" name="fatherName" class="form-input-control"
+                placeholder="Father / Husband name"
+                [(ngModel)]="currentEmp.fatherName" />
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">DATE OF BIRTH</label>
+              <input type="date" name="dob" class="form-input-control"
+                [(ngModel)]="currentEmp.dob" />
+            </div>
+            <div class="form-field">
+              <label class="field-label">GENDER</label>
+              <p-dropdown name="gender" [options]="genderOptions"
+                [(ngModel)]="currentEmp.gender" [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">BLOOD GROUP</label>
+              <p-dropdown name="bloodGroup" [options]="bloodGroupOptions"
+                [(ngModel)]="currentEmp.bloodGroup" [appendTo]="'body'" placeholder="Select Blood Group"
+                styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+            <div class="form-field">
+              <label class="field-label">EMAIL</label>
+              <input type="email" name="email"
+                #emailInput="ngModel"
+                [class.um-input-error]="emailInput.invalid && (emailInput.dirty || emailInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="name@company.com"
+                [(ngModel)]="currentEmp.email" email />
+              <div *ngIf="emailInput.errors?.['email'] && (emailInput.dirty || emailInput.touched || formSubmitted)" class="um-error-text">Enter a valid email address.</div>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">MOBILE NO <span class="required-star">*</span></label>
+              <input type="text" name="mobile"
+                #mobileInput="ngModel"
+                [class.um-input-error]="mobileInput.invalid && (mobileInput.dirty || mobileInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="10-digit mobile"
+                [(ngModel)]="currentEmp.mobile" pattern="^[0-9]{10}$" required />
+              <div *ngIf="mobileInput.errors?.['required'] && (mobileInput.dirty || mobileInput.touched || formSubmitted)" class="um-error-text">Mobile is required.</div>
+              <div *ngIf="mobileInput.errors?.['pattern'] && (mobileInput.dirty || mobileInput.touched || formSubmitted)" class="um-error-text">Mobile must be a valid 10-digit number.</div>
+            </div>
+            <div class="form-field">
+              <label class="field-label">ALTERNATE MOBILE NO</label>
+              <input type="text" name="altMobile"
+                #altMobileInput="ngModel"
+                [class.um-input-error]="altMobileInput.invalid && (altMobileInput.dirty || altMobileInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="Alternative contact number"
+                [(ngModel)]="currentEmp.altMobile" pattern="^[0-9]{10}$" />
+              <div *ngIf="altMobileInput.errors?.['pattern'] && (altMobileInput.dirty || altMobileInput.touched || formSubmitted)" class="um-error-text">Alternate Mobile must be a 10-digit number.</div>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">AADHAAR NO</label>
+              <input type="text" name="aadhaar" class="form-input-control"
+                placeholder="XXXX XXXX XXXX"
+                [(ngModel)]="currentEmp.aadhaar" />
+            </div>
+            <div class="form-field">
+              <label class="field-label">PAN</label>
+              <input type="text" name="pan" class="form-input-control"
+                placeholder="ABCDE1234F"
+                [(ngModel)]="currentEmp.pan" />
+            </div>
+          </div>
+
+          <div class="form-group-checkbox" style="margin: 12px 0 8px 0; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="isSameAddress" name="isSameAddress"
+              [(ngModel)]="isSameAddress" (change)="onSameAddressChange($event)" style="width: 16px; height: 16px; cursor: pointer;" />
+            <label htmlFor="isSameAddress" class="field-label" style="margin-bottom: 0; cursor: pointer; text-transform: none; font-weight: 500;">Permanent Address is the same as Residential Address</label>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">RESIDENTIAL ADDRESS <span class="required-star">*</span></label>
+              <textarea name="resAddress"
+                #resAddressInput="ngModel"
+                [class.um-input-error]="resAddressInput.invalid && (resAddressInput.dirty || resAddressInput.touched || formSubmitted)"
+                class="form-input-control" rows="3"
+                placeholder="House no, street, city, state, PIN"
+                [(ngModel)]="currentEmp.resAddress" (ngModelChange)="onResAddressChange()" required></textarea>
+              <div *ngIf="resAddressInput.invalid && (resAddressInput.dirty || resAddressInput.touched || formSubmitted)" class="um-error-text">Residential Address is required.</div>
+            </div>
+
+            <div class="form-field">
+              <label class="field-label">PERMANENT ADDRESS</label>
+              <textarea name="permAddress" class="form-input-control" rows="3"
+                placeholder="Permanent address as per records"
+                [(ngModel)]="currentEmp.permAddress" [disabled]="isSameAddress"></textarea>
+            </div>
+          </div>
+
+        </ng-container>
+
+        <!-- ══ TAB: CAREER & EDUCATION ══ -->
+        <ng-container *ngIf="activeFormTab === 'experience'">
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">EDUCATION <span class="required-star">*</span></label>
+              <p-dropdown name="education" [options]="educationOptions"
+                #educationInput="ngModel"
+                [class.um-input-error]="educationInput.invalid && (educationInput.dirty || educationInput.touched || formSubmitted)"
+                [(ngModel)]="currentEmp.education" [appendTo]="'body'" placeholder="Select Highest Qualification"
+                styleClass="um-primeng-dd" required>
+              </p-dropdown>
+              <div *ngIf="educationInput.invalid && (educationInput.dirty || educationInput.touched || formSubmitted)" class="um-error-text">Education is required.</div>
+            </div>
+            
+            <div class="form-field">
+              <label class="field-label">PREVIOUS EXPERIENCE</label>
+              <div style="display: flex; align-items: center; gap: 8px; height: 38px;">
+                <input type="checkbox" id="prevExperience" name="prevExperience"
+                  [(ngModel)]="currentEmp.prevExperience" style="width: 16px; height: 16px; cursor: pointer; margin: 0;" />
+                <label for="prevExperience" style="cursor: pointer; font-size: 0.875rem; font-weight: 500; margin-bottom: 0; text-transform: none;">Has prior employment experience</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row-grid" *ngIf="currentEmp.prevExperience">
+            <div class="form-field">
+              <label class="field-label">YEARS WORKED <span class="required-star">*</span></label>
+              <input type="number" name="yearsWorked"
+                #yearsWorkedInput="ngModel"
+                [class.um-input-error]="yearsWorkedInput.invalid && (yearsWorkedInput.dirty || yearsWorkedInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="Years of experience"
+                [(ngModel)]="currentEmp.yearsWorked" min="0" step="0.5" required />
+              <div *ngIf="yearsWorkedInput.invalid && (yearsWorkedInput.dirty || yearsWorkedInput.touched || formSubmitted)" class="um-error-text">Years worked is required (cannot be negative).</div>
+            </div>
+            <div class="form-field"></div>
+          </div>
+
+          <div class="emp-section-divider" style="margin-top: 16px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 4px; font-weight: 600; text-transform: uppercase; font-size: 0.8rem; color: #64748b;">
+            <i class="pi pi-paperclip"></i> Documents & Attachments
+          </div>
+
+          <div class="form-row-grid" style="margin-top: 12px;">
+            <div class="form-field">
+              <label class="field-label">RESUME / CV</label>
+              <div class="custom-file-upload-wrapper" style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" class="action-btn-ctrl cancel-btn" style="padding: 6px 12px; font-size: 0.8rem;" (click)="resumeUpload.click()">Choose File</button>
+                  <input #resumeUpload type="file" style="display: none;" accept=".pdf,.doc,.docx" (change)="onFileSelected($event, 'resume')" />
+                  <span style="font-size: 0.8rem; color: #475569; align-self: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">
+                    {{ getFileName(currentEmp.resumeFile) || 'No file selected' }}
+                  </span>
+                  <button *ngIf="currentEmp.resumeFile" type="button" class="p-button-danger p-button-text" style="color: #ef4444; border: none; background: transparent; cursor: pointer; font-weight: bold;" (click)="removeFile('resume')">&times;</button>
+                </div>
+                <small style="font-size: 0.7rem; color: #64748b;">PDF, DOC, DOCX up to 5MB</small>
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label class="field-label">EDUCATION CERTIFICATE</label>
+              <div class="custom-file-upload-wrapper" style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" class="action-btn-ctrl cancel-btn" style="padding: 6px 12px; font-size: 0.8rem;" (click)="eduUpload.click()">Choose File</button>
+                  <input #eduUpload type="file" style="display: none;" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onFileSelected($event, 'education')" />
+                  <span style="font-size: 0.8rem; color: #475569; align-self: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">
+                    {{ getFileName(currentEmp.educationDocs) || 'No file selected' }}
+                  </span>
+                  <button *ngIf="currentEmp.educationDocs" type="button" class="p-button-danger p-button-text" style="color: #ef4444; border: none; background: transparent; cursor: pointer; font-weight: bold;" (click)="removeFile('education')">&times;</button>
+                </div>
+                <small style="font-size: 0.7rem; color: #64748b;">PDF, DOCX, JPG, PNG up to 5MB</small>
+              </div>
+            </div>
+          </div>
+
+        </ng-container>
+
+        <!-- ══ TAB 2: JOB DETAILS ══ -->
+        <ng-container *ngIf="activeFormTab === 'job'">
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">DATE OF JOINING <span class="required-star">*</span></label>
+              <input type="date" name="doj"
+                #dojInput="ngModel"
+                [class.um-input-error]="dojInput.invalid && (dojInput.dirty || dojInput.touched || formSubmitted)"
+                class="form-input-control"
+                [(ngModel)]="currentEmp.doj" required />
+              <div *ngIf="dojInput.invalid && (dojInput.dirty || dojInput.touched || formSubmitted)" class="um-error-text">DOJ is required.</div>
+            </div>
+            <div class="form-field">
+              <label class="field-label">EMPLOYEE TYPE <span class="required-star">*</span></label>
+              <p-dropdown name="employeeType" [options]="employeeTypeOptions"
+                [(ngModel)]="currentEmp.employeeType" [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">DEPARTMENT <span class="required-star">*</span></label>
+              <p-dropdown name="department" [options]="departmentOptions"
+                [(ngModel)]="currentEmp.department"
+                (onChange)="onDepartmentChange($event)"
+                [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+            <div class="form-field">
+              <label class="field-label">DESIGNATION <span class="required-star">*</span></label>
+              <p-dropdown name="designation" [options]="designationOptions"
+                [(ngModel)]="currentEmp.designation"
+                [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">SHIFT</label>
+              <p-dropdown name="shift" [options]="shiftOptions"
+                [(ngModel)]="currentEmp.shift" [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+            <div class="form-field">
+              <label class="field-label">REPORTING MANAGER</label>
+              <input type="text" name="reportingManager" class="form-input-control"
+                placeholder="Manager name"
+                [(ngModel)]="currentEmp.reportingManager" />
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">SKILL / TRADE</label>
+              <p-dropdown name="skill" [options]="skillOptions"
+                [(ngModel)]="currentEmp.skill" [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+            <div class="form-field">
+              <label class="field-label">MACHINE ASSIGNED</label>
+              <p-dropdown name="machineAssigned" [options]="machineOptions"
+                [(ngModel)]="currentEmp.machineAssigned" [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">BASIC SALARY (₹)</label>
+              <input type="number" name="basicSalary" class="form-input-control"
+                placeholder="0.00"
+                [(ngModel)]="currentEmp.basicSalary" />
+            </div>
+            <div class="form-field">
+              <label class="field-label">ATTENDANCE TYPE</label>
+              <p-dropdown name="attendanceType" [options]="attendanceTypeOptions"
+                [(ngModel)]="currentEmp.attendanceType" [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">STATUS</label>
+              <p-dropdown name="status" [options]="statusOptions"
+                [(ngModel)]="currentEmp.status" [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+            <div class="form-field">
+              <label class="field-label">WORK LOCATION</label>
+              <p-dropdown name="workLocation" [options]="workLocationOptions"
+                [(ngModel)]="currentEmp.workLocation" [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+          </div>
+
+        </ng-container>
+
+        <!-- ══ TAB 3: BANK & STATUTORY ══ -->
+        <ng-container *ngIf="activeFormTab === 'bank'">
+
+          <div class="emp-section-divider">
+            <i class="pi pi-credit-card"></i> Bank Details
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">ACCOUNT HOLDER NAME</label>
+              <input type="text" name="accountHolder" class="form-input-control"
+                placeholder="As per bank records"
+                [(ngModel)]="currentEmp.bankDetails.accountHolder" />
+            </div>
+            <div class="form-field">
+              <label class="field-label">BANK NAME</label>
+              <input type="text" name="bankName" class="form-input-control"
+                placeholder="e.g. SBI, HDFC"
+                [(ngModel)]="currentEmp.bankDetails.bankName" />
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">ACCOUNT NUMBER</label>
+              <input type="text" name="accountNo" class="form-input-control"
+                placeholder="Account number"
+                [(ngModel)]="currentEmp.bankDetails.accountNo" />
+            </div>
+            <div class="form-field">
+              <label class="field-label">IFSC CODE</label>
+              <input type="text" name="ifsc" class="form-input-control"
+                placeholder="e.g. SBIN0001234"
+                [(ngModel)]="currentEmp.bankDetails.ifsc" />
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">ACCOUNT TYPE</label>
+              <p-dropdown name="accountType"
+                [options]="['Savings', 'Current']"
+                [(ngModel)]="currentEmp.bankDetails.accountType"
+                [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+            <div class="form-field">
+              <label class="field-label">BRANCH</label>
+              <input type="text" name="branch" class="form-input-control"
+                placeholder="Branch name / city"
+                [(ngModel)]="currentEmp.bankDetails.branch" />
+            </div>
+          </div>
+
+          <div class="emp-section-divider" style="margin-top:8px;">
+            <i class="pi pi-shield"></i> Statutory Details
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">PF ACCOUNT NO</label>
+              <input type="text" name="pfNo" class="form-input-control"
+                placeholder="PF number"
+                [(ngModel)]="currentEmp.statutory.pfNo" />
+            </div>
+            <div class="form-field">
+              <label class="field-label">ESI NO</label>
+              <input type="text" name="esiNo" class="form-input-control"
+                placeholder="ESI number"
+                [(ngModel)]="currentEmp.statutory.esiNo" />
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">UAN (Universal Account No)</label>
+              <input type="text" name="uan" class="form-input-control"
+                placeholder="12-digit UAN"
+                [(ngModel)]="currentEmp.statutory.uan" />
+            </div>
+            <div class="form-field">
+              <label class="field-label">PF APPLICABLE</label>
+              <p-dropdown name="pfApplicable"
+                [options]="['Yes', 'No']"
+                [(ngModel)]="currentEmp.statutory.pfApplicable"
+                [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">ESI APPLICABLE</label>
+              <p-dropdown name="esiApplicable"
+                [options]="['Yes', 'No']"
+                [(ngModel)]="currentEmp.statutory.esiApplicable"
+                [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+            <div class="form-field">
+              <label class="field-label">GRATUITY APPLICABLE</label>
+              <p-dropdown name="gratuityApplicable"
+                [options]="['Yes', 'No']"
+                [(ngModel)]="currentEmp.statutory.gratuityApplicable"
+                [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+          </div>
+
+        </ng-container>
+
+      </div>
+    </form>
+
+    <!-- FOOTER: Prev/Next + Save/Cancel -->
+    <div class="form-actions-bar">
+      <div style="display:flex; gap:6px;">
+        <button type="button" class="emp-tab-nav-btn"
+          [disabled]="activeFormTab === formTabs[0].key"
+          (click)="prevTab()">
+          <i class="pi pi-chevron-left"></i> Prev
+        </button>
+        <button type="button" class="emp-tab-nav-btn"
+          [disabled]="activeFormTab === formTabs[formTabs.length-1].key"
+          (click)="nextTab()">
+          Next <i class="pi pi-chevron-right"></i>
+        </button>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="action-btn-ctrl cancel-btn" (click)="closeModal()">Cancel</button>
+        <button type="button" class="action-btn-ctrl save-btn" (click)="saveEmployee(empForm)">
+          {{ isEditMode ? 'Update Employee' : 'Save Employee' }}
+        </button>
+      </div>
+    </div>
+
+  </ng-template>
+
+</p-dialog>
+
+<!-- PrimeNG Toast & Confirm Dialog -->
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>

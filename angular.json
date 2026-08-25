@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "hmep_portal": {
+    "visipak_ERP": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -23,20 +23,22 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/hmep_portal",
+            "outputPath": "dist/visipak_ERP",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": [
               "zone.js"
             ],
             "tsConfig": "tsconfig.app.json",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "public"
-              },
-              "src/assets"
-            ],
+           "assets": [
+            
+ 
+  {
+    "glob": "**/*",
+    "input": "src/assets",
+    "output": "assets"
+  }
+],
             "styles": [
          "node_modules/bootstrap/dist/css/bootstrap.min.css",
   "node_modules/primeng/resources/themes/lara-light-blue/theme.css",
@@ -45,6 +47,8 @@
   "node_modules/primeflex/primeflex.css",
   "src/styles.css",
     "src/assets/style.css"
+   
+
             ],
             "scripts": []
           },
@@ -54,20 +58,15 @@
                 {
                   "type": "initial",
                   "maximumWarning": "2MB",
-                  "maximumError": "3MB"
+                  "maximumError": "4MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "20kB",
+                  "maximumError": "30kB"
                 }
               ],
-              "outputHashing": "all",
-              "optimization": {
-                "fonts": {
-                  "inline": false
-                }
-              }
+              "outputHashing": "all"
             },
             "development": {
               "optimization": false,
@@ -81,10 +80,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "hmep_portal:build:production"
+              "buildTarget": "visipak_ERP:build:production"
             },
             "development": {
-              "buildTarget": "hmep_portal:build:development"
+              "buildTarget": "visipak_ERP:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -100,13 +99,15 @@
               "zone.js/testing"
             ],
             "tsConfig": "tsconfig.spec.json",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "public"
-              },
-              "src/assets"
-            ],
+                 "assets": [
+                 
+ 
+  {
+    "glob": "**/*",
+    "input": "src/assets",
+    "output": "assets"
+  }
+],
             "styles": [
           "node_modules/bootstrap/dist/css/bootstrap.min.css",
   "node_modules/primeng/resources/themes/lara-light-blue/theme.css",

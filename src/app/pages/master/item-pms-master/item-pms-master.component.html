@@ -1,0 +1,896 @@
+<div class="users-roles-container">
+
+  <!-- PAGE HEADER -->
+  <div class="page-title-section-custom">
+    <div>
+      <h1 class="page-title-custom">Customer PMS Item Master</h1>
+      <p class="page-subtitle-custom">Customer-specific product specification master and revision control.</p>
+    </div>
+    <div class="header-actions-group">
+      <button 
+        pButton 
+        type="button" 
+        icon="pi pi-plus" 
+        label="Add New Item" 
+        class="add-item-btn" 
+        (click)="openCreateModal()">
+      </button>
+      <button 
+        pButton 
+        type="button" 
+        icon="pi pi-download" 
+        label="Export" 
+        class="export-btn" 
+        (click)="exportExcel()">
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div *ngFor="let kpi of kpis" class="kpi-card">
+      <div class="kpi-info">
+        <span class="kpi-label">{{ kpi.label }}</span>
+        <span class="kpi-value">{{ kpi.value }}</span>
+      </div>
+      <div class="kpi-icon-wrapper" [ngClass]="kpi.colorClass">
+        <i [class]="kpi.icon"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEARCH / FILTER PANEL -->
+  <div class="filter-card-wrapper">
+    <h3 class="filter-card-title">Search / Filter</h3>
+    <form #filterForm="ngForm" class="filter-form-layout">
+      
+      <div class="filter-field">
+        <label class="filter-label">Customer *</label>
+        <p-dropdown 
+          name="filterCustomer" 
+          [options]="customerOptions" 
+          [(ngModel)]="searchFilters.customer"
+          placeholder="Select Customer"
+          styleClass="filter-dropdown-control"
+          [appendTo]="'body'">
+        </p-dropdown>
+      </div>
+
+      <div class="filter-field">
+        <label class="filter-label">Item Code / Name</label>
+        <input 
+          type="text" 
+          name="filterItemQuery" 
+          class="filter-input-control" 
+          placeholder="Search item code or name" 
+          [(ngModel)]="searchFilters.itemQuery" />
+      </div>
+
+      <div class="filter-field">
+        <label class="filter-label">Status</label>
+        <p-dropdown 
+          name="filterStatus" 
+          [options]="statusOptions" 
+          [(ngModel)]="searchFilters.status"
+          placeholder="Select Status"
+          styleClass="filter-dropdown-control"
+          [appendTo]="'body'">
+        </p-dropdown>
+      </div>
+
+      <!-- <div class="filter-actions">
+        <button 
+          pButton 
+          type="button" 
+          label="Search" 
+          class="filter-btn-search" 
+          (click)="applyFilters()">
+        </button>
+        <button 
+          pButton 
+          type="button" 
+          label="Reset" 
+          class="filter-btn-reset" 
+          (click)="resetFilters()">
+        </button>
+      </div> -->
+      <div class="filter-actions">
+  <button 
+    pButton 
+    type="button" 
+    label="Search" 
+    class="filter-btn-search" 
+    (click)="applyFilters()">
+  </button>
+  <button 
+    pButton 
+    type="button" 
+    label="Reset" 
+    class="filter-btn-reset" 
+    (click)="resetFilters()">
+  </button>
+</div>
+
+    </form>
+  </div>
+
+  <!-- ITEM LIST TABLE -->
+  <div class="table-card card-wrapper">
+    <div class="card-header-with-search" style="border-bottom: none; padding-bottom: 0;">
+      <div class="card-header-text">
+        <h3 class="card-title">Item List</h3>
+      </div>
+    </div>
+
+    <div class="table-inner-container">
+      <p-table
+        #dt
+        [value]="filteredItems"
+        [paginator]="true"
+        [rows]="8"
+        [globalFilterFields]="['itemCode','customerName','pmsRef','version','productType','ply','status','bf','colour','joint']"
+        responsiveLayout="scroll"
+        styleClass="p-datatable-sm custom-primeng-table users-pro-table">
+
+        <ng-template pTemplate="header">
+          <tr>
+            <th>S.No</th>
+            <th pSortableColumn="customerName">
+              <div class="header-cell-content"><span>Customer</span><p-sortIcon field="customerName"></p-sortIcon></div>
+            </th>
+            <th pSortableColumn="itemCode">
+              <div class="header-cell-content"><span>Item Code</span><p-sortIcon field="itemCode"></p-sortIcon></div>
+            </th>
+            <th pSortableColumn="variantDesc">
+              <div class="header-cell-content"><span>Item Name</span><p-sortIcon field="variantDesc"></p-sortIcon></div>
+            </th>
+            <th pSortableColumn="ply">
+              <div class="header-cell-content"><span>Ply</span><p-sortIcon field="ply"></p-sortIcon></div>
+            </th>
+            <th>Dimensions</th>
+            <th pSortableColumn="bf">
+              <div class="header-cell-content"><span>BF</span><p-sortIcon field="bf"></p-sortIcon></div>
+            </th>
+            <th pSortableColumn="boardGsm">
+              <div class="header-cell-content"><span>GSM</span><p-sortIcon field="boardGsm"></p-sortIcon></div>
+            </th>
+            <th pSortableColumn="joint">
+              <div class="header-cell-content"><span>Joint</span><p-sortIcon field="joint"></p-sortIcon></div>
+            </th>
+            <th pSortableColumn="colour">
+              <div class="header-cell-content"><span>Colour</span><p-sortIcon field="colour"></p-sortIcon></div>
+            </th>
+            <th pSortableColumn="status">
+              <div class="header-cell-content"><span>Status</span><p-sortIcon field="status"></p-sortIcon></div>
+            </th>
+            <th style="text-align:center;">Actions</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-item let-i="rowIndex">
+          <tr>
+            <td>{{ i + 1 }}</td>
+            <!-- CUSTOMER badge styled layout -->
+            <td>
+              <div class="cell-wrapper">
+                <span class="dept-badge">{{ item.customerName }}</span>
+              </div>
+            </td>
+            <!-- ITEM CODE + Initials variant -->
+            <td class="name-cell">
+              <div class="cell-wrapper employee-cell">
+                <!-- <div class="employee-avatar">
+                  {{ getItemInitials(item.productType) }}
+                </div> -->
+                <div class="employee-details">
+                  <span class="employee-name">{{ item.itemCode }}</span>
+                  <span class="employee-code">{{ item.pmsRef }}</span>
+                  <!-- <span class="employee-code">{{ item.pmsRef }} | {{ item.version }}</span> -->
+                </div>
+              </div>
+            </td>
+                 <td>{{ item.variantDesc || (item.ply + ' Ply ' + item.productType) }}</td>
+            <!-- <td>{{ item.variantDesc || (item.ply + ' Ply ' + item.productType) }}</td> -->
+            <td>{{ item.ply }}</td>
+            <!-- DIMENSIONS with the split columns look -->
+            <td>
+              <div class="dimension-metrics">
+                <div class="metric">
+                  <span class="metric-label">Length</span>
+                  <span class="metric-value">{{ item.length }}</span>
+                </div>
+                <div class="divider"></div>
+                <div class="metric">
+                  <span class="metric-label">Width</span>
+                  <span class="metric-value">{{ item.width }}</span>
+                </div>
+                <div class="divider"></div>
+                <div class="metric">
+                  <span class="metric-label">Height</span>
+                  <span class="metric-value">{{ item.height }}</span>
+                </div>
+              </div>
+            </td>
+            <td><span class="uid-text">{{ item.bf || '—' }}</span></td>
+            <td><span class="uid-text">{{ item.boardGsm || item.gsm || '—' }}</span></td>
+            <td><span class="uid-text">{{ item.joint || '—' }}</span></td>
+            <td><span class="uid-text">{{ item.colour || '—' }}</span></td>
+            <td>
+              <div class="cell-wrapper">
+                <span class="status-badge"
+                  [ngClass]="{
+                    'status-active': item.status === 'Approved' || item.status === 'Active',
+                    'status-inactive': item.status === 'Obsolete' || item.status === 'Deactivated',
+                    'status-draft': item.status === 'Draft'
+                  }">
+                  <i [class]="(item.status === 'Approved' || item.status === 'Active') ? 'pi pi-check-circle' : (item.status === 'Obsolete' || item.status === 'Deactivated') ? 'pi pi-times-circle' : 'pi pi-clock'"></i>
+                  {{ item.status }}
+                </span>
+              </div>
+            </td>
+            <!-- ACTIONS group restored -->
+            <td class="actions-cell">
+              <div class="cell-wrapper">
+                <div class="action-buttons-group">
+                  <button
+                    pButton type="button" icon="pi pi-eye"
+                    class="p-button-text p-button-rounded p-button-sm action-btn view-btn-icon"
+                    (click)="viewItem(item)" title="View Item">
+                  </button>
+                  <button
+                    pButton type="button" icon="pi pi-pencil"
+                    class="p-button-text p-button-rounded p-button-sm action-btn edit-btn-icon"
+                    (click)="editItem(item)" title="Edit Item">
+                  </button>
+                  <button
+                    pButton type="button" icon="pi pi-trash"
+                    class="p-button-text p-button-rounded p-button-danger p-button-sm action-btn delete-btn-icon"
+                    (click)="confirmDelete($event, item)" title="Delete">
+                  </button>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="12" class="empty-table-cell">
+              <i class="pi pi-box empty-icon"></i>
+              <p>No items found.</p>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================
+     MODAL: VIEW ITEM DETAILS (Read-only) [RESTORED]
+     ============================================ -->
+<p-dialog
+  [(visible)]="showViewModal"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="emp-view-dialog"
+  [style]="{ width: '750px', maxWidth: '95vw' }">
+
+  <ng-template pTemplate="header">
+    <div class="modal-header-row">
+      <div class="employee-avatar" [style.background]="viewItem_data.avatarColor">
+        {{ getItemInitials(viewItem_data.productType) }}
+      </div>
+      <div class="emp-header-info">
+        <div class="emp-header-name">{{ viewItem_data.itemCode }}</div>
+        <div class="emp-header-meta">{{ viewItem_data.pmsRef }} &nbsp;|&nbsp; {{ viewItem_data.version }} &nbsp;|&nbsp; {{ viewItem_data.customerName }}</div>
+      </div>
+      <span class="status-badge"
+        [ngClass]="{
+          'status-active': viewItem_data.status === 'Approved' || viewItem_data.status === 'Active',
+          'status-inactive': viewItem_data.status === 'Obsolete' || viewItem_data.status === 'Deactivated',
+          'status-draft': viewItem_data.status === 'Draft'
+        }">
+        {{ viewItem_data.status }}
+      </span>
+    </div>
+  </ng-template>
+
+  <ng-template pTemplate="content">
+    <!-- Tab Navigation -->
+    <div class="emp-form-tabs">
+      <button *ngFor="let tab of formTabs" class="emp-tab-btn"
+        [class.active]="activeViewTab === tab.key"
+        (click)="activeViewTab = tab.key">
+        <i [class]="tab.icon"></i> {{ tab.label }}
+      </button>
+    </div>
+
+    <!-- Tab 1: Basic Info & Specs Header -->
+    <ng-container *ngIf="activeViewTab === 'basic'">
+      <div class="view-detail-grid">
+        <div class="view-field"><span class="view-label">Item Code</span><span class="view-value">{{ viewItem_data.itemCode }}</span></div>
+        <div class="view-field"><span class="view-label">Customer Name</span><span class="view-value">{{ viewItem_data.customerName }}</span></div>
+        <div class="view-field"><span class="view-label">PMS Reference</span><span class="view-value">{{ viewItem_data.pmsRef }}</span></div>
+        <div class="view-field"><span class="view-label">Version</span><span class="view-value">{{ viewItem_data.version }}</span></div>
+        <div class="view-field"><span class="view-label">Product Type</span><span class="view-value">{{ viewItem_data.productType }}</span></div>
+        <div class="view-field"><span class="view-label">Ply</span><span class="view-value">{{ viewItem_data.ply }}</span></div>
+        <div class="view-field"><span class="view-label">Flute</span><span class="view-value">{{ viewItem_data.flute || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Variant Description</span><span class="view-value">{{ viewItem_data.variantDesc || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">HSN Code</span><span class="view-value">{{ viewItem_data.hsnCode || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Grade</span><span class="view-value">{{ viewItem_data.grade || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Type</span><span class="view-value">{{ viewItem_data.type || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Effective Date</span><span class="view-value">{{ viewItem_data.effectiveDate || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Binding Type</span><span class="view-value">{{ viewItem_data.bindingType }}</span></div>
+        <div class="view-field"><span class="view-label">Dimension Reference</span><span class="view-value">{{ viewItem_data.dimensionRef }}</span></div>
+        <div class="view-field"><span class="view-label">Artwork</span><span class="view-value">{{ viewItem_data.artworkFileName || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Status</span><span class="view-value">{{ viewItem_data.status }}</span></div>
+      </div>
+
+      <div class="emp-section-divider" style="margin-top:12px;"><i class="pi pi-info-circle"></i> Technical Product Details</div>
+      <div class="view-detail-grid">
+        <div class="view-field"><span class="view-label">Molecular Formula</span><span class="view-value">{{ viewItem_data.molecularFormula || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Molecular Weight</span><span class="view-value">{{ viewItem_data.molecularWeight || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Test Procedure Ref</span><span class="view-value">{{ viewItem_data.testProcedureRef || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Storage Condition</span><span class="view-value">{{ viewItem_data.storageCondition || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Sample Qty Required</span><span class="view-value">{{ viewItem_data.sampleQtyRequired || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Expiry Date</span><span class="view-value">{{ viewItem_data.expiryDate || '—' }}</span></div>
+      </div>
+    </ng-container>
+
+    <!-- Tab 2: Dimensions & Quality -->
+    <ng-container *ngIf="activeViewTab === 'dimensions'">
+      <div class="emp-section-divider"><i class="pi pi-arrows-alt"></i> Dimensions & Structural Specs</div>
+      <div class="view-detail-grid">
+        <div class="view-field"><span class="view-label">Length (mm)</span><span class="view-value">{{ viewItem_data.length }}</span></div>
+        <div class="view-field"><span class="view-label">Width (mm)</span><span class="view-value">{{ viewItem_data.width }}</span></div>
+        <div class="view-field"><span class="view-label">Height (mm)</span><span class="view-value">{{ viewItem_data.height }}</span></div>
+        <div class="view-field"><span class="view-label">Tolerance</span><span class="view-value">{{ viewItem_data.tolerance }}</span></div>
+        <div class="view-field"><span class="view-label">Closing Flap Gap (mm)</span><span class="view-value">{{ viewItem_data.closingFlapGap }}</span></div>
+        <div class="view-field"><span class="view-label">Creasing Type</span><span class="view-value">{{ viewItem_data.creasingType }}</span></div>
+        <div class="view-field"><span class="view-label">Edge Treatment Method</span><span class="view-value">{{ viewItem_data.edgeTreatment }}</span></div>
+        <div class="view-field"><span class="view-label">Weight</span><span class="view-value">{{ viewItem_data.weight || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Joint / Flap Joint</span><span class="view-value">{{ viewItem_data.joint || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Partitions</span><span class="view-value">{{ viewItem_data.partitions || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Line</span><span class="view-value">{{ viewItem_data.line || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Colour / Colour Code</span><span class="view-value">{{ viewItem_data.colour || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Printing Structural</span><span class="view-value">{{ viewItem_data.printing || '—' }}</span></div>
+      </div>
+      <div class="emp-section-divider" style="margin-top:8px;"><i class="pi pi-verified"></i> Quality & Structural Parameters</div>
+      <div class="view-detail-grid">
+        <div class="view-field"><span class="view-label">BF (Burst Factor)</span><span class="view-value">{{ viewItem_data.bf || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Total Grammage (Min)</span><span class="view-value">{{ viewItem_data.grammageMin }}</span></div>
+        <div class="view-field"><span class="view-label">Total Grammage (Max)</span><span class="view-value">{{ viewItem_data.grammageMax }}</span></div>
+        <div class="view-field"><span class="view-label">Grammage Per Ply</span><span class="view-value">{{ viewItem_data.grammagePerPly || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Board GSM</span><span class="view-value">{{ viewItem_data.boardGsm }}</span></div>
+        <div class="view-field"><span class="view-label">Bursting Strength</span><span class="view-value">{{ viewItem_data.burstingStrength }}</span></div>
+        <div class="view-field"><span class="view-label">BCT Strength</span><span class="view-value">{{ viewItem_data.bctStrength }}</span></div>
+        <div class="view-field"><span class="view-label">RCT Strength</span><span class="view-value">{{ viewItem_data.rctStrength }}</span></div>
+        <div class="view-field"><span class="view-label">Moisture</span><span class="view-value">{{ viewItem_data.moisture }}</span></div>
+        <div class="view-field"><span class="view-label">COBB Test Value</span><span class="view-value">{{ viewItem_data.cobbTest }}</span></div>
+      </div>
+    </ng-container>
+
+    <!-- Tab 3: Packing & System Status -->
+    <ng-container *ngIf="activeViewTab === 'packing'">
+      <div class="view-detail-grid">
+        <div class="view-field"><span class="view-label">Packing Mode</span><span class="view-value">{{ viewItem_data.packingMode }}</span></div>
+        <div class="view-field"><span class="view-label">Qty Per Bundle</span><span class="view-value">{{ viewItem_data.qtyPerBundle }}</span></div>
+        <div class="view-field"><span class="view-label">Created By</span><span class="view-value">{{ viewItem_data.createdBy || '—' }}</span></div>
+        <div class="view-field"><span class="view-label">Updated On</span><span class="view-value">{{ viewItem_data.updatedOn || '—' }}</span></div>
+      </div>
+    </ng-container>
+  </ng-template>
+
+  <ng-template pTemplate="footer">
+    <button pButton type="button" label="Edit Item" icon="pi pi-pencil"
+      class="p-button-sm p-button-outlined"
+      (click)="editFromView()">
+    </button>
+    <button pButton type="button" label="Close" icon="pi pi-times"
+      class="p-button-sm p-button-text"
+      (click)="showViewModal = false">
+    </button>
+  </ng-template>
+
+</p-dialog>
+
+<!-- ============================================
+     MODAL: ADD / EDIT ITEM [RESTORED]
+     ============================================ -->
+<p-dialog
+  [(visible)]="showItemModal"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '850px', maxWidth: '95vw' }"
+  styleClass="emp-form-dialog"
+  (onHide)="onModalHide()">
+
+  <!-- Dialog Header -->
+  <ng-template pTemplate="header">
+    <div class="modal-header-content">
+      <span class="modal-title-icon">
+        <i [class]="isEditMode ? 'pi pi-pencil' : 'pi pi-plus-circle'"></i>
+      </span>
+      <div>
+        <h3 class="modal-title-text">{{ isEditMode ? 'Update Item / PMS' : 'Add Item / PMS' }}</h3>
+        <p class="modal-subtitle-text">{{ isEditMode ? 'Modify product specification and quality parameters' : 'Register new item with PMS details, dimensions and packing info' }}</p>
+      </div>
+    </div>
+  </ng-template>
+
+  <!-- Dialog Body -->
+  <ng-template pTemplate="content">
+
+    <!-- FORM SECTION TABS -->
+    <div class="emp-form-tabs">
+      <button
+        *ngFor="let tab of formTabs"
+        class="emp-form-tab"
+        [class.active]="activeFormTab === tab.key"
+        (click)="switchFormTab(tab.key)"
+        type="button">
+        <i [class]="tab.icon"></i>
+        <span>{{ tab.label }}</span>
+      </button>
+    </div>
+
+    <form #itemForm="ngForm" class="user-form-content">
+      <div class="form-fields-wrapper">
+
+        <!-- ══ TAB 1: BASIC INFO & DOCUMENT SPECS ══ -->
+        <ng-container *ngIf="activeFormTab === 'basic'">
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">ITEM CODE</label>
+              <input type="text" name="itemCode" class="form-input-control" placeholder="e.g. 2000300"
+                [(ngModel)]="currentItem.itemCode" [disabled]="isEditMode" [class.disabled-input]="isEditMode"/>
+            </div>
+            <div class="form-field">
+              <label class="field-label">CUSTOMER NAME <span class="required-star">*</span></label>
+              <p-dropdown name="customerName" [options]="customerOptions"
+                #customerInput="ngModel"
+                [(ngModel)]="currentItem.customerName"
+                [class.um-input-error]="customerInput.invalid && (customerInput.dirty || customerInput.touched || formSubmitted)"
+                [appendTo]="'body'" styleClass="um-primeng-dd" required>
+              </p-dropdown>
+              <div *ngIf="customerInput.invalid && (customerInput.dirty || customerInput.touched || formSubmitted)" class="um-error-text">Customer Name is required.</div>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">PMS REFERENCE <span class="required-star">*</span></label>
+              <input type="text" name="pmsRef"
+                #pmsRefInput="ngModel"
+                [class.um-input-error]="pmsRefInput.invalid && (pmsRefInput.dirty || pmsRefInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="e.g. PMS/284"
+                [(ngModel)]="currentItem.pmsRef" required />
+              <div *ngIf="pmsRefInput.invalid && (pmsRefInput.dirty || pmsRefInput.touched || formSubmitted)" class="um-error-text">PMS Reference is required.</div>
+            </div>
+            <div class="form-field">
+              <label class="field-label">VERSION <span class="required-star">*</span></label>
+              <input type="text" name="version"
+                #versionInput="ngModel"
+                [class.um-input-error]="versionInput.invalid && (versionInput.dirty || versionInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="e.g. VER 1.0"
+                [(ngModel)]="currentItem.version" required />
+              <div *ngIf="versionInput.invalid && (versionInput.dirty || versionInput.touched || formSubmitted)" class="um-error-text">Version is required.</div>
+            </div>
+          </div>
+
+          <div class="form-row-grid-three">
+            <div class="form-field">
+              <label class="field-label">PRODUCT TYPE <span class="required-star">*</span></label>
+              <p-dropdown name="productType" [options]="productTypes"
+                [(ngModel)]="currentItem.productType"
+                [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+            <div class="form-field">
+              <label class="field-label">PLY <span class="required-star">*</span></label>
+              <p-dropdown name="ply" [options]="plyOptions"
+                [(ngModel)]="currentItem.ply"
+                [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+            <div class="form-field">
+              <label class="field-label">FLUTE <span class="required-star">*</span></label>
+              <p-dropdown name="flute" [options]="fluteOptions"
+                [(ngModel)]="currentItem.flute"
+                [appendTo]="'body'" styleClass="um-primeng-dd"
+                placeholder="Select Flute">
+              </p-dropdown>
+            </div>
+          </div>
+
+          <div class="form-row-grid-three">
+            <div class="form-field">
+              <label class="field-label">HSN CODE</label>
+              <input type="text" name="hsnCode" class="form-input-control" placeholder="e.g. 48191010" [(ngModel)]="currentItem.hsnCode" />
+            </div>
+            <div class="form-field">
+              <label class="field-label">GRADE</label>
+              <input type="text" name="grade" class="form-input-control" placeholder="e.g. In-house" [(ngModel)]="currentItem.grade" />
+            </div>
+            <div class="form-field">
+              <label class="field-label">TYPE</label>
+              <input type="text" name="type" class="form-input-control" placeholder="e.g. Release" [(ngModel)]="currentItem.type" />
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">EFFECTIVE DATE</label>
+              <input type="text" name="effectiveDate" class="form-input-control" placeholder="DD/MM/YYYY" [(ngModel)]="currentItem.effectiveDate" />
+            </div>
+            <div class="form-field">
+              <label class="field-label">VARIANT DESCRIPTION <span class="required-star">*</span></label>
+              <input type="text" name="variantDesc"
+                #variantInput="ngModel"
+                [class.um-input-error]="variantInput.invalid && (variantInput.dirty || variantInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="e.g. 5 Ply Shipper (410x215x225)"
+                [(ngModel)]="currentItem.variantDesc" required />
+              <div *ngIf="variantInput.invalid && (variantInput.dirty || variantInput.touched || formSubmitted)" class="um-error-text">Variant Description is required.</div>
+            </div>
+          </div>
+
+          <div class="emp-section-divider"><i class="pi pi-info-circle"></i> Document Product Details (Analytical Standards)</div>
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">MOLECULAR FORMULA</label>
+              <input type="text" name="molecularFormula" class="form-input-control" placeholder="e.g. Not Applicable" [(ngModel)]="currentItem.molecularFormula"/>
+            </div>
+            <div class="form-field">
+              <label class="field-label">MOLECULAR WEIGHT</label>
+              <input type="text" name="molecularWeight" class="form-input-control" placeholder="e.g. Not Applicable" [(ngModel)]="currentItem.molecularWeight"/>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">TEST PROCEDURE REFERENCE</label>
+              <input type="text" name="testProcedureRef" class="form-input-control" placeholder="e.g. Current version of GTP/040" [(ngModel)]="currentItem.testProcedureRef"/>
+            </div>
+            <div class="form-field">
+              <label class="field-label">STORAGE CONDITION</label>
+              <input type="text" name="storageCondition" class="form-input-control" placeholder="e.g. Room temperature" [(ngModel)]="currentItem.storageCondition"/>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">SAMPLE QUANTITY FOR ANALYSIS</label>
+              <input type="text" name="sampleQtyRequired" class="form-input-control" placeholder="As per GTP" [(ngModel)]="currentItem.sampleQtyRequired"/>
+            </div>
+            <div class="form-field">
+              <label class="field-label">EXPIRY DATE</label>
+              <input type="text" name="expiryDate" class="form-input-control" placeholder="e.g. 5 years" [(ngModel)]="currentItem.expiryDate"/>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">BINDING TYPE <span class="required-star">*</span></label>
+              <p-dropdown name="bindingType" [options]="bindingTypes"
+                [(ngModel)]="currentItem.bindingType"
+                [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+            <div class="form-field">
+              <label class="field-label">DIMENSION REFERENCE <span class="required-star">*</span></label>
+              <p-dropdown name="dimensionRef" [options]="dimensionRefOptions"
+                [(ngModel)]="currentItem.dimensionRef"
+                [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">ARTWORK <span class="required-star">*</span></label>
+              <div class="artwork-upload-wrapper">
+                <input
+                  type="file"
+                  id="artworkUpload"
+                  accept=".pdf,.png,.jpg,.jpeg,.ai,.eps"
+                  (change)="onArtworkSelected($event)"
+                  style="display:none" />
+                <label for="artworkUpload" class="artwork-upload-label">
+                  <i class="pi pi-upload"></i>
+                  {{ currentItem.artworkFileName || 'Click to upload artwork' }}
+                </label>
+                <span *ngIf="currentItem.artworkFileName" class="artwork-clear-btn" (click)="clearArtwork()">
+                  <i class="pi pi-times"></i>
+                </span>
+              </div>
+            </div>
+            <div class="form-field">
+              <label class="field-label">STATUS <span class="required-star">*</span></label>
+              <p-dropdown name="status" [options]="statusOptions"
+                [(ngModel)]="currentItem.status"
+                [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+          </div>
+
+        </ng-container>
+
+        <!-- ══ TAB 2: DIMENSIONS & QUALITY SPECS ══ -->
+        <ng-container *ngIf="activeFormTab === 'dimensions'">
+
+          <div class="emp-section-divider">
+            <i class="pi pi-arrows-alt"></i> Dimensions & Structural Engineering Details
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">LENGTH (mm) <span class="required-star">*</span></label>
+              <input type="number" name="length"
+                #lengthInput="ngModel"
+                [class.um-input-error]="lengthInput.invalid && (lengthInput.dirty || lengthInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="e.g. 410"
+                [(ngModel)]="currentItem.length" required min="1" />
+              <div *ngIf="lengthInput.invalid && (lengthInput.dirty || lengthInput.touched || formSubmitted)" class="um-error-text">Length is required.</div>
+            </div>
+            <div class="form-field">
+              <label class="field-label">WIDTH (mm) <span class="required-star">*</span></label>
+              <input type="number" name="width"
+                #widthInput="ngModel"
+                [class.um-input-error]="widthInput.invalid && (widthInput.dirty || widthInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="e.g. 215"
+                [(ngModel)]="currentItem.width" required min="1" />
+              <div *ngIf="widthInput.invalid && (widthInput.dirty || widthInput.touched || formSubmitted)" class="um-error-text">Width is required.</div>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">HEIGHT (mm) <span class="required-star">*</span></label>
+              <input type="number" name="height"
+                #heightInput="ngModel"
+                [class.um-input-error]="heightInput.invalid && (heightInput.dirty || heightInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="e.g. 225"
+                [(ngModel)]="currentItem.height" required min="1" />
+              <div *ngIf="heightInput.invalid && (heightInput.dirty || heightInput.touched || formSubmitted)" class="um-error-text">Height is required.</div>
+            </div>
+            <div class="form-field">
+              <label class="field-label">TOLERANCE <span class="required-star">*</span></label>
+              <input type="text" name="tolerance"
+                #toleranceInput="ngModel"
+                [class.um-input-error]="toleranceInput.invalid && (toleranceInput.dirty || toleranceInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="e.g. ±3%"
+                [(ngModel)]="currentItem.tolerance" required />
+              <div *ngIf="toleranceInput.invalid && (toleranceInput.dirty || toleranceInput.touched || formSubmitted)" class="um-error-text">Tolerance is required.</div>
+            </div>
+          </div>
+
+          <div class="form-row-grid-three">
+            <div class="form-field">
+              <label class="field-label">JOINT / FLAP JOINT</label>
+              <input type="text" name="joint" class="form-input-control" placeholder="e.g. Die Cut Job / Inside" [(ngModel)]="currentItem.joint"/>
+            </div>
+            <div class="form-field">
+              <label class="field-label">PARTITIONS</label>
+              <input type="text" name="partitions" class="form-input-control" placeholder="e.g. No Partitions" [(ngModel)]="currentItem.partitions"/>
+            </div>
+            <div class="form-field">
+              <label class="field-label">LINE</label>
+              <input type="text" name="line" class="form-input-control" placeholder="e.g. Inside" [(ngModel)]="currentItem.line"/>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">COLOUR / COLOUR CODE</label>
+              <input type="text" name="colour" class="form-input-control" placeholder="e.g. Brown / BLACK" [(ngModel)]="currentItem.colour"/>
+            </div>
+            <div class="form-field">
+              <label class="field-label">PRINTING STRUCTURAL</label>
+              <input type="text" name="printing" class="form-input-control" placeholder="e.g. 2 Color (Outside)" [(ngModel)]="currentItem.printing"/>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">CLOSING FLAP GAP (mm) <span class="required-star">*</span></label>
+              <input type="number" name="closingFlapGap"
+                #flapInput="ngModel"
+                [class.um-input-error]="flapInput.invalid && (flapInput.dirty || flapInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="2"
+                [(ngModel)]="currentItem.closingFlapGap" required min="0" />
+              <div *ngIf="flapInput.invalid && (flapInput.dirty || flapInput.touched || formSubmitted)" class="um-error-text">Flap gap is required.</div>
+            </div>
+            <div class="form-field">
+              <label class="field-label">CREASING TYPE <span class="required-star">*</span></label>
+              <p-dropdown name="creasingType" [options]="creasingTypes"
+                [(ngModel)]="currentItem.creasingType"
+                [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">EDGE TREATMENT METHOD <span class="required-star">*</span></label>
+              <p-dropdown name="edgeTreatment" [options]="edgeTreatmentOptions"
+                [(ngModel)]="currentItem.edgeTreatment"
+                [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+            <div class="form-field">
+              <label class="field-label">WEIGHT / WEIGHT STRATEGY</label>
+              <input type="text" name="weight"
+                class="form-input-control" placeholder="e.g. 25.40 KG / 1000 Nos"
+                [(ngModel)]="currentItem.weight" />
+            </div>
+          </div>
+
+          <div class="emp-section-divider" style="margin-top:8px;">
+            <i class="pi pi-verified"></i> Quality & Laboratory Parameters
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">BF (BURST FACTOR)</label>
+              <input type="number" name="bf" class="form-input-control" placeholder="e.g. 30" [(ngModel)]="currentItem.bf" />
+            </div>
+            <div class="form-field">
+              <label class="field-label">BOARD GSM <span class="required-star">*</span></label>
+              <input type="number" name="boardGsm"
+                #boardGsmInput="ngModel"
+                [class.um-input-error]="boardGsmInput.invalid && (boardGsmInput.dirty || boardGsmInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="GSM value"
+                [(ngModel)]="currentItem.boardGsm" required min="0" />
+              <div *ngIf="boardGsmInput.invalid && (boardGsmInput.dirty || boardGsmInput.touched || formSubmitted)" class="um-error-text">Board GSM is required.</div>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">TOTAL GRAMMAGE (MIN) <span class="required-star">*</span></label>
+              <input type="number" name="grammageMin"
+                #gMinInput="ngModel"
+                [class.um-input-error]="gMinInput.invalid && (gMinInput.dirty || gMinInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="Min GSM"
+                [(ngModel)]="currentItem.grammageMin" required min="0" />
+              <div *ngIf="gMinInput.invalid && (gMinInput.dirty || gMinInput.touched || formSubmitted)" class="um-error-text">Grammage Min is required.</div>
+            </div>
+            <div class="form-field">
+              <label class="field-label">TOTAL GRAMMAGE (MAX) <span class="required-star">*</span></label>
+              <input type="number" name="grammageMax"
+                #gMaxInput="ngModel"
+                [class.um-input-error]="gMaxInput.invalid && (gMaxInput.dirty || gMaxInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="Max GSM"
+                [(ngModel)]="currentItem.grammageMax" required min="0" />
+              <div *ngIf="gMaxInput.invalid && (gMaxInput.dirty || gMaxInput.touched || formSubmitted)" class="um-error-text">Grammage Max is required.</div>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">GRAMMAGE PER PLY</label>
+              <input type="number" name="grammagePerPly"
+                class="form-input-control" placeholder="Per ply value"
+                [(ngModel)]="currentItem.grammagePerPly" min="0" />
+            </div>
+            <div class="form-field">
+              <label class="field-label">BURSTING STRENGTH <span class="required-star">*</span></label>
+              <input type="number" name="burstingStrength"
+                #bsInput="ngModel"
+                [class.um-input-error]="bsInput.invalid && (bsInput.dirty || bsInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="kg/cm²"
+                [(ngModel)]="currentItem.burstingStrength" required min="0" />
+              <div *ngIf="bsInput.invalid && (bsInput.dirty || bsInput.touched || formSubmitted)" class="um-error-text">Bursting Strength is required.</div>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">BCT STRENGTH <span class="required-star">*</span></label>
+              <input type="number" name="bctStrength"
+                #bctInput="ngModel"
+                [class.um-input-error]="bctInput.invalid && (bctInput.dirty || bctInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="kg"
+                [(ngModel)]="currentItem.bctStrength" required min="0" />
+              <div *ngIf="bctInput.invalid && (bctInput.dirty || bctInput.touched || formSubmitted)" class="um-error-text">BCT Strength is required.</div>
+            </div>
+            <div class="form-field">
+              <label class="field-label">RCT STRENGTH <span class="required-star">*</span></label>
+              <input type="number" name="rctStrength"
+                #rctInput="ngModel"
+                [class.um-input-error]="rctInput.invalid && (rctInput.dirty || rctInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="N/m"
+                [(ngModel)]="currentItem.rctStrength" required min="0" />
+              <div *ngIf="rctInput.invalid && (rctInput.dirty || rctInput.touched || formSubmitted)" class="um-error-text">RCT Strength is required.</div>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">MOISTURE <span class="required-star">*</span></label>
+              <input type="number" name="moisture"
+                #moistureInput="ngModel"
+                [class.um-input-error]="moistureInput.invalid && (moistureInput.dirty || moistureInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="%"
+                [(ngModel)]="currentItem.moisture" required min="0" />
+              <div *ngIf="moistureInput.invalid && (moistureInput.dirty || moistureInput.touched || formSubmitted)" class="um-error-text">Moisture is required.</div>
+            </div>
+            <div class="form-field">
+              <label class="field-label">COBB TEST VALUE <span class="required-star">*</span></label>
+              <input type="number" name="cobbTest"
+                #cobbInput="ngModel"
+                [class.um-input-error]="cobbInput.invalid && (cobbInput.dirty || cobbInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="g/m²"
+                [(ngModel)]="currentItem.cobbTest" required min="0" />
+              <div *ngIf="cobbInput.invalid && (cobbInput.dirty || cobbInput.touched || formSubmitted)" class="um-error-text">COBB Test Value is required.</div>
+            </div>
+          </div>
+
+        </ng-container>
+
+        <!-- ══ TAB 3: PACKING & SYSTEM FLOW ══ -->
+        <ng-container *ngIf="activeFormTab === 'packing'">
+
+          <div class="emp-section-divider">
+            <i class="pi pi-box"></i> Packing Specifications
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-field">
+              <label class="field-label">PACKING MODE <span class="required-star">*</span></label>
+              <p-dropdown name="packingMode" [options]="packingModes"
+                [(ngModel)]="currentItem.packingMode"
+                [appendTo]="'body'" styleClass="um-primeng-dd">
+              </p-dropdown>
+            </div>
+            <div class="form-field">
+              <label class="field-label">QUANTITY PER BUNDLE <span class="required-star">*</span></label>
+              <input type="number" name="qtyPerBundle"
+                #qtyInput="ngModel"
+                [class.um-input-error]="qtyInput.invalid && (qtyInput.dirty || qtyInput.touched || formSubmitted)"
+                class="form-input-control" placeholder="25"
+                [(ngModel)]="currentItem.qtyPerBundle" required min="1" />
+              <div *ngIf="qtyInput.invalid && (qtyInput.dirty || qtyInput.touched || formSubmitted)" class="um-error-text">Quantity Per Bundle is required.</div>
+            </div>
+          </div>
+
+        </ng-container>
+
+      </div>
+    </form>
+
+    <!-- FOOTER: Prev/Next + Save/Cancel -->
+    <div class="form-actions-bar">
+      <div style="display:flex; gap:6px;">
+        <button type="button" class="emp-tab-nav-btn"
+          [disabled]="activeFormTab === formTabs[0].key"
+          (click)="prevTab()">
+          <i class="pi pi-chevron-left"></i> Prev
+        </button>
+        <button type="button" class="emp-tab-nav-btn"
+          [disabled]="activeFormTab === formTabs[formTabs.length-1].key"
+          (click)="nextTab()">
+          Next <i class="pi pi-chevron-right"></i>
+        </button>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="action-btn-ctrl cancel-btn" (click)="closeModal()">Cancel</button>
+        <button type="button" class="action-btn-ctrl save-btn" (click)="saveItem(itemForm)">
+          {{ isEditMode ? 'Update Item' : 'Save Item' }}
+        </button>
+      </div>
+    </div>
+
+  </ng-template>
+
+</p-dialog>
+
+<!-- PrimeNG Global Elements -->
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>

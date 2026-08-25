@@ -5,18 +5,15 @@ import { BehaviorSubject } from 'rxjs';
   providedIn: 'root'
 })
 export class SidebarService {
-  private sidebarState = new BehaviorSubject<boolean>(false); // false = open, true = collapsed
+
+  private sidebarState = new BehaviorSubject<boolean>(false);
   sidebarState$ = this.sidebarState.asObservable();
 
-  toggle(): void {
+  toggle() {
     this.sidebarState.next(!this.sidebarState.value);
   }
 
-  setState(collapsed: boolean): void {
-    this.sidebarState.next(collapsed);
-  }
-
-  getValue(): boolean {
-    return this.sidebarState.value;
+  setState(state: boolean) {
+    this.sidebarState.next(state);
   }
 }

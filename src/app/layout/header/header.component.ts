@@ -9,7 +9,7 @@ import { Router } from '@angular/router';
   selector: 'app-header',
   standalone: false,
   templateUrl: './header.component.html',
-  styleUrls: ['./header.component.css']
+  styleUrl: './header.component.css'
 })
 export class HeaderComponent {
 
@@ -23,6 +23,7 @@ export class HeaderComponent {
     private loginService: LoginService,
     private router: Router
   ) {
+    // Assigned here so headerService is already initialized
     this.headerConfig$ = this.headerService.headerConfig$;
   }
 

@@ -13,20 +13,19 @@
           <i class="pi pi-shield"></i> ENTERPRISE SECURE
         </span>
       </div>
-
+      
       <!-- Center text branding -->
       <div class="branding-content">
         <div class="brand-glow-bg"></div>
         <h1>Smart Packaging & Box Manufacturing</h1>
-        <p>Enterprise Resource Planning optimized for high-volume shop floors, real-time shift tracking, quality
-          control, and logistics.</p>
-
+        <p>Enterprise Resource Planning optimized for high-volume shop floors, real-time shift tracking, quality control, and logistics.</p>
+        
         <!-- Interactive Layered Visual illustrating Box Manufacturing Process -->
         <div class="branding-visual-container">
-          <img src="assets/smart-packaging.jpg" alt="Smart Packaging & Manufacturing" class="branding-hero-image">
+          <img src="assets/images/smart-packaging.jpg" alt="Smart Packaging & Manufacturing" class="branding-hero-image">
         </div>
       </div>
-
+      
       <!-- Bottom branding info -->
       <div class="branding-footer">
         <p>© 2026 Visipack ERP. Real-Time Production & Operations Management.</p>
@@ -39,7 +38,7 @@
         <!-- Logo centered above welcome headers -->
         <div class="logo-section">
           <div class="logo-glow-wrapper"></div>
-          <img src="assets/logo.png" alt="VISIPACK Logo" class="center-login-logo">
+          <img src="assets/images/logo.png" alt="VISIPACK Logo" class="center-login-logo">
         </div>
 
         <div class="login-header">
@@ -70,14 +69,17 @@
 
         <!-- ══ VIEW 1: LOGIN ══ -->
         <form *ngIf="currentView === 'login'" [formGroup]="loginForm" (ngSubmit)="onLogin()" autocomplete="off">
-
+          
           <!-- Input Email -->
-          <div class="form-group"
-            [class.input-error]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
+          <div class="form-group" [class.input-error]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
             <label class="input-label">Email Address</label>
             <div class="input-wrapper">
               <i class="pi pi-envelope input-prefix-icon"></i>
-              <input type="email" formControlName="email" placeholder="name@company.com" class="login-input" />
+              <input 
+                type="email" 
+                formControlName="email" 
+                placeholder="name@company.com" 
+                class="login-input" />
             </div>
             <small class="error-msg" *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
               <i class="pi pi-exclamation-circle"></i> Valid email address is required
@@ -85,14 +87,19 @@
           </div>
 
           <!-- Input Password -->
-          <div class="form-group"
-            [class.input-error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
+          <div class="form-group" [class.input-error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
             <label class="input-label">Password</label>
             <div class="input-wrapper">
               <i class="pi pi-lock input-prefix-icon"></i>
-              <input [type]="showPassword ? 'text' : 'password'" formControlName="password" placeholder="••••••••"
+              <input 
+                [type]="showPassword ? 'text' : 'password'" 
+                formControlName="password" 
+                placeholder="••••••••" 
                 class="login-input password-input" />
-              <button type="button" class="password-toggle-btn" (click)="togglePasswordVisibility()"
+              <button 
+                type="button" 
+                class="password-toggle-btn" 
+                (click)="togglePasswordVisibility()"
                 [title]="showPassword ? 'Hide password' : 'Show password'">
                 <i [class]="showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
               </button>
@@ -125,13 +132,18 @@
 
         <!-- ══ VIEW 2: FORGOT PASSWORD ══ -->
         <form *ngIf="currentView === 'forgot-password'" (ngSubmit)="sendOtp()" autocomplete="off">
-
+          
           <div class="form-group">
             <label class="input-label">Email Address</label>
             <div class="input-wrapper">
               <i class="pi pi-envelope input-prefix-icon"></i>
-              <input type="email" name="forgotEmail" placeholder="name@company.com" class="login-input"
-                [(ngModel)]="forgotEmail" required />
+              <input 
+                type="email" 
+                name="forgotEmail" 
+                placeholder="name@company.com" 
+                class="login-input"
+                [(ngModel)]="forgotEmail"
+                required />
             </div>
           </div>
 
@@ -157,7 +169,7 @@
 
         <!-- ══ VIEW 3: VERIFY OTP ══ -->
         <form *ngIf="currentView === 'verify-otp'" (ngSubmit)="verifyOtp()" autocomplete="off">
-
+          
           <!-- Demo OTP Helper Alert -->
           <div class="info-alert-banner animate-slide-up" *ngIf="successMsg">
             <i class="pi pi-info-circle info-banner-icon"></i>
@@ -168,8 +180,14 @@
             <label class="input-label">One-Time Password (OTP)</label>
             <div class="input-wrapper">
               <i class="pi pi-key input-prefix-icon"></i>
-              <input type="text" name="otpCode" placeholder="123456" maxlength="6" class="login-input letter-spacing-lg"
-                [(ngModel)]="otpCode" required />
+              <input 
+                type="text" 
+                name="otpCode" 
+                placeholder="123456" 
+                maxlength="6"
+                class="login-input letter-spacing-lg"
+                [(ngModel)]="otpCode"
+                required />
             </div>
           </div>
 
@@ -195,15 +213,23 @@
 
         <!-- ══ VIEW 4: RESET PASSWORD ══ -->
         <form *ngIf="currentView === 'reset-password'" (ngSubmit)="resetPassword()" autocomplete="off">
-
+          
           <!-- New Password -->
           <div class="form-group">
             <label class="input-label">New Password</label>
             <div class="input-wrapper">
               <i class="pi pi-lock input-prefix-icon"></i>
-              <input [type]="showNewPassword ? 'text' : 'password'" name="newPassword" placeholder="••••••••"
-                class="login-input password-input" [(ngModel)]="newPassword" required />
-              <button type="button" class="password-toggle-btn" (click)="showNewPassword = !showNewPassword"
+              <input 
+                [type]="showNewPassword ? 'text' : 'password'" 
+                name="newPassword" 
+                placeholder="••••••••" 
+                class="login-input password-input"
+                [(ngModel)]="newPassword"
+                required />
+              <button 
+                type="button" 
+                class="password-toggle-btn" 
+                (click)="showNewPassword = !showNewPassword"
                 [title]="showNewPassword ? 'Hide password' : 'Show password'">
                 <i [class]="showNewPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
               </button>
@@ -215,9 +241,17 @@
             <label class="input-label">Confirm Password</label>
             <div class="input-wrapper">
               <i class="pi pi-lock input-prefix-icon"></i>
-              <input [type]="showConfirmPassword ? 'text' : 'password'" name="confirmPassword" placeholder="••••••••"
-                class="login-input password-input" [(ngModel)]="confirmPassword" required />
-              <button type="button" class="password-toggle-btn" (click)="showConfirmPassword = !showConfirmPassword"
+              <input 
+                [type]="showConfirmPassword ? 'text' : 'password'" 
+                name="confirmPassword" 
+                placeholder="••••••••" 
+                class="login-input password-input"
+                [(ngModel)]="confirmPassword"
+                required />
+              <button 
+                type="button" 
+                class="password-toggle-btn" 
+                (click)="showConfirmPassword = !showConfirmPassword"
                 [title]="showConfirmPassword ? 'Hide password' : 'Show password'">
                 <i [class]="showConfirmPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
               </button>
@@ -245,8 +279,7 @@
           <div class="success-icon-container">
             <i class="pi pi-check-circle"></i>
           </div>
-          <p class="success-text">Your password has been changed successfully. You can now log in with your new
-            credentials.</p>
+          <p class="success-text">Your password has been changed successfully. You can now log in with your new credentials.</p>
           <button type="button" class="login-submit-btn" (click)="switchView('login')">
             Back to Login <i class="pi pi-sign-in"></i>
           </button>

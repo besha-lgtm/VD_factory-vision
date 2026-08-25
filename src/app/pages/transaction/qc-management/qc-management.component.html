@@ -1,0 +1,492 @@
+<div class="users-roles-container">
+
+  <div class="page-title-section">
+    <h1 class="page-title">QC Management</h1>
+    <p class="page-subtitle">Raw material reel QC, chemical/starch parameter verification and stage-wise final product inspection.</p>
+  </div>
+
+  <div class="kpi-grid">
+    <div *ngFor="let kpi of kpis" class="kpi-card">
+      <div class="kpi-info">
+        <span class="kpi-label">{{ kpi.label }}</span>
+        <span class="kpi-value">{{ kpi.value }}</span>
+      </div>
+      <div class="kpi-icon-wrapper" [ngClass]="kpi.colorClass">
+        <i [class]="kpi.icon"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="qc-module-tabs">
+    <button class="qc-module-tab" [class.active]="activeModule === 'rawmaterial'" (click)="switchModule('rawmaterial')">
+      <i class="pi pi-inbox"></i> Raw Material QC
+    </button>
+    <button class="qc-module-tab" [class.active]="activeModule === 'chemical'" (click)="switchModule('chemical')">
+      <i class="pi pi-flask"></i> Chemical / Starch QC
+    </button>
+    <button class="qc-module-tab" [class.active]="activeModule === 'stagefinal'" (click)="switchModule('stagefinal')">
+      <i class="pi pi-check-square"></i> Stage &amp; Final QC
+    </button>
+  </div>
+
+  <ng-container *ngIf="activeModule === 'rawmaterial'">
+    <div class="table-card card-wrapper" style="margin-top:0;">
+      <div class="card-header-with-search">
+        <div class="card-header-text">
+          <h3 class="card-title">Raw Material Reel QC</h3>
+          <p class="card-subtitle">Multiple GSM &amp; BF readings per reel </p>
+        </div>
+        <div class="table-toolbar">
+          <div class="form-row-grid" style="gap:12px; align-items:flex-end; margin:0;">
+            <div class="form-field" style="margin:0;">
+              <label class="field-label">SUPPLIER</label>
+              <p-dropdown [options]="rmSupplierNames" [(ngModel)]="selectedRmSupplier"
+                (ngModelChange)="switchRmSupplier($event)"
+                styleClass="um-primeng-dd qc-dd-sm" [appendTo]="'body'"
+                placeholder="Select Supplier">
+              </p-dropdown>
+            </div>
+            <div class="form-field" style="margin:0;">
+              <label class="field-label">FILTER DATE</label>
+              <input type="date" class="form-input-control" style="width:140px;" [(ngModel)]="rmFilterDate" />
+            </div>
+            <div class="form-field" style="margin:0;">
+              <label class="field-label">ORDER GSM</label>
+              <input type="number" class="form-input-control" style="width:110px;" placeholder="220" [(ngModel)]="currentRmBatch.ordGsm" />
+            </div>
+            <div class="form-field" style="margin:0;">
+              <label class="field-label">ORDER BF</label>
+              <input type="number" class="form-input-control" style="width:90px;" placeholder="20" [(ngModel)]="currentRmBatch.ordBf" />
+            </div>
+          </div>
+          <button pButton type="button" icon="pi pi-plus" label="Add Reel" class="p-button-sm create-emp-btn" (click)="addReel()"></button>
+        </div>
+      </div>
+
+      <div class="table-inner-container" style="max-height: 450px; overflow-y: auto; border: 1px solid #eaecf0; border-radius: 8px;">
+        <table class="qc-reel-table">
+          <thead style="position: sticky; top: 0; z-index: 2; background: #f9fafb;">
+            <tr>
+              <th class="col-slno cell-zone-meta">Sl.No</th>
+              <th class="col-reel cell-zone-meta">REEL NO</th>
+              <th class="col-size cell-zone-meta">SIZE</th>
+              <th class="col-ordgsm cell-zone-target">ORD.GSM</th>
+              <th class="col-visipak cell-zone-reading">VISIPAK GSM</th>
+              <th class="col-ordgsm cell-zone-reading">ORDER.BF</th>
+              <th class="col-readings cell-zone-reading">ACTUAL BS</th>
+              <th class="col-readings cell-zone-reading">ACT.BF</th>
+              <th class="col-avg cell-zone-target">AVG BF</th>
+              <th class="col-avg cell-zone-target">AVG GSM</th>
+              <th class="col-result cell-zone-status">RESULT</th>
+              <th class="col-actions-rm cell-zone-status" style="text-align:center;">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let reel of filteredReelRecords; let ri = index">
+              <tr *ngFor="let reading of reel.readings; let rdIdx = index" [class.first-reading-row]="rdIdx === 0">
+                <td class="col-slno reel-meta-cell" *ngIf="rdIdx === 0" [attr.rowspan]="reel.readings.length">
+                  {{ ri + 1 }}
+                </td>
+                <td class="col-reel reel-meta-cell" *ngIf="rdIdx === 0" [attr.rowspan]="reel.readings.length">
+                  <input type="text" class="qc-inline-input" placeholder="26A08461" [(ngModel)]="reel.reelNo" />
+                </td>
+                <td class="col-size reel-meta-cell" *ngIf="rdIdx === 0" [attr.rowspan]="reel.readings.length">
+                  <input type="number" class="qc-inline-input" placeholder="104" [(ngModel)]="reel.size" />
+                </td>
+                <td class="col-ordgsm reel-target-cell" *ngIf="rdIdx === 0" [attr.rowspan]="reel.readings.length">
+                  <span class="qc-static-val">{{ currentRmBatch.ordGsm || '—' }}</span>
+                </td>
+                <td class="col-visipak reel-reading-cell">
+                  <input type="number" class="qc-inline-input" placeholder="216" [(ngModel)]="reading.visipakGsm" (ngModelChange)="recalcReel(reel)" />
+                </td>
+                <td class="col-ordgsm reel-reading-cell">
+                  <span class="qc-static-val">{{ currentRmBatch.ordBf || '—' }}</span>
+                </td>
+                <td class="col-readings reel-reading-cell">
+                  <input type="number" class="qc-inline-input" placeholder="4.8" step="0.1" [(ngModel)]="reading.actualBs" (ngModelChange)="recalcReel(reel)" />
+                </td>
+                <td class="col-readings reel-reading-cell">
+                  <input type="number" class="qc-inline-input qc-calc-input" [value]="reading.actBf | number:'1.2-2'" readonly />
+                </td>
+                <td class="col-avg reel-target-cell reel-avg-cell" *ngIf="rdIdx === 0" [attr.rowspan]="reel.readings.length">
+                  <span class="qc-avg-badge">{{ reel.avgBf | number:'1.2-2' }}</span>
+                </td>
+                <td class="col-avg reel-target-cell reel-avg-cell" *ngIf="rdIdx === 0" [attr.rowspan]="reel.readings.length">
+                  <span class="qc-avg-badge">{{ reel.avgGsm | number:'1.2-2' }}</span>
+                </td>
+                <td class="col-result reel-meta-cell" *ngIf="rdIdx === 0" [attr.rowspan]="reel.readings.length" style="vertical-align: middle;">
+                  <p-dropdown [options]="resultOptions" [(ngModel)]="reel.result" (ngModelChange)="updateKPIs()" styleClass="um-primeng-dd qc-dd-sm" [appendTo]="'body'"></p-dropdown>
+                </td>
+                <td class="col-actions-rm reel-meta-cell" *ngIf="rdIdx === 0" [attr.rowspan]="reel.readings.length" style="text-align:center; vertical-align:middle;">
+                  <div class="action-buttons-group" style="flex-direction:column; gap:4px; align-items:center;">
+                    <button pButton type="button" icon="pi pi-plus" class="p-button-text p-button-rounded p-button-sm action-btn edit-btn-icon" title="Add Reading" (click)="addReading(reel)"></button>
+                    <button *ngIf="reel.readings.length > 1" pButton type="button" icon="pi pi-minus" class="p-button-text p-button-rounded p-button-sm action-btn" style="color:#f59e0b;" title="Remove Last Reading" (click)="removeLastReading(reel)"></button>
+                    <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-rounded p-button-danger p-button-sm action-btn delete-btn-icon" title="Delete Reel" (click)="confirmDeleteReel($event, ri)"></button>
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
+            <tr *ngIf="filteredReelRecords.length === 0">
+              <td colspan="12" class="empty-table-cell">
+                <i class="pi pi-inbox empty-icon"></i>
+                <p>No reels matched for this selection or date.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="form-actions-bar" style="padding:12px 16px;">
+        <div></div>
+        <button pButton type="button" icon="pi pi-save" label="Save Reel QC" class="action-btn-ctrl save-btn" (click)="saveReelQC()"></button>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="activeModule === 'chemical'">
+    <div class="table-card card-wrapper" style="margin-top:0;">
+      <div class="card-header-with-search">
+        <div class="card-header-text">
+          <h3 class="card-title">Chemical / Starch QC</h3>
+          <p class="card-subtitle">Parameter-wise vendor result vs VISIPAK result verification</p>
+        </div>
+        <div class="table-toolbar">
+          <div class="form-row-grid" style="gap:12px; align-items:flex-end; margin:0;">
+            <div class="form-field" style="margin:0;">
+              <label class="field-label">SUPPLIER</label>
+              <p-dropdown [options]="chemSupplierNames" [(ngModel)]="selectedChemSupplier"
+                (ngModelChange)="switchChemSupplier($event)"
+                styleClass="um-primeng-dd qc-dd-sm" [appendTo]="'body'"
+                placeholder="Select Supplier">
+              </p-dropdown>
+            </div>
+            <div class="form-field" style="margin:0;">
+              <label class="field-label">MATERIAL</label>
+              <input type="text" class="form-input-control" style="width:150px;" placeholder="Native Starch" [(ngModel)]="currentChemBatch.material" />
+            </div>
+            <div class="form-field" style="margin:0;">
+              <label class="field-label">FILTER DATE</label>
+              <input type="date" class="form-input-control" style="width:140px;" [(ngModel)]="chemFilterDate" />
+            </div>
+          </div>
+          <button pButton type="button" icon="pi pi-plus" label="Add Parameter" class="p-button-sm create-emp-btn" (click)="addChemParameter()"></button>
+        </div>
+      </div>
+
+      <div class="table-inner-container" style="max-height: 450px; overflow-y: auto; border: 1px solid #eaecf0; border-radius: 8px;">
+        <table class="qc-reel-table">
+          <thead style="position: sticky; top: 0; z-index: 2; background: #f9fafb;">
+            <tr>
+              <th style="width:60px;" class="cell-zone-meta">SL NO</th>
+              <th style="min-width:180px;" class="cell-zone-meta">PARAMETER</th>
+              <th style="min-width:160px;" class="cell-zone-meta">SPECIFICATION</th>
+              <th style="min-width:140px;" class="cell-zone-reading">VENDOR RESULT</th>
+              <th style="min-width:140px;" class="cell-zone-reading">VISIPAK RESULT</th>
+              <th style="width:130px; text-align:center;" class="cell-zone-status">STATUS</th>
+              <th style="width:80px; text-align:center;" class="cell-zone-status">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let param of filteredChemParams; let pi = index">
+              <td style="text-align:center; font-weight:600;" class="reel-meta-cell">{{ pi + 1 }}</td>
+              <td class="reel-meta-cell">
+                <input type="text" class="qc-inline-input" placeholder="e.g. MOISTURE" [(ngModel)]="param.paramName" />
+              </td>
+              <td class="reel-meta-cell">
+                <input type="text" class="qc-inline-input" placeholder="e.g. 13.0 %" [(ngModel)]="param.specification" />
+              </td>
+              <td class="reel-reading-cell">
+                <input type="text" class="qc-inline-input" placeholder="e.g. 11.04 %" [(ngModel)]="param.vendorResult" />
+              </td>
+              <td class="reel-reading-cell">
+                <input type="text" class="qc-inline-input" placeholder="e.g. 10.6 %" [(ngModel)]="param.visipakResult" />
+              </td>
+              <td style="text-align:center; width:176px" class="reel-meta-cell">
+                <p-dropdown [options]="chemStatusOptions" [(ngModel)]="param.status" styleClass="um-primeng-dd qc-dd-sm" [appendTo]="'body'"></p-dropdown>
+              </td>
+              <td style="text-align:center;" class="reel-meta-cell">
+                <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-rounded p-button-danger p-button-sm action-btn delete-btn-icon" (click)="confirmDeleteChemParam($event, pi)"></button>
+              </td>
+            </tr>
+            <tr *ngIf="filteredChemParams.length === 0">
+              <td colspan="7" class="empty-table-cell">
+                <i class="pi pi-flask empty-icon"></i>
+                <p>No chemical parameters matched for this selection or date.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="form-actions-bar" style="padding:12px 16px;">
+        <div></div>
+        <button pButton type="button" icon="pi pi-save" label="Save Chemical QC" class="action-btn-ctrl save-btn" (click)="saveChemQC()"></button>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="activeModule === 'stagefinal'">
+    <div class="full-width-layout-stack">
+      <div class="table-card card-wrapper">
+        <div class="card-header-with-search">
+          <div class="card-header-text">
+            <h3 class="card-title">Stage &amp; Final QC Records</h3>
+            <p class="card-subtitle">In-process and final product inspection against PMS specifications</p>
+          </div>
+          <div class="table-toolbar" style="display: flex; gap: 16px; align-items: center;">
+            <div class="table-search-bar">
+              <span class="search-input-wrapper">
+                <i class="pi pi-search search-icon"></i>
+                <input pInputText type="text" (input)="dt.filterGlobal($any($event.target).value, 'contains')" placeholder="Search by job, type, result..." class="search-input" />
+              </span>
+            </div>
+            <button pButton type="button" icon="pi pi-plus" label="Log QC Entry" class="p-button-sm create-user-btn" (click)="openCreateModal()"></button>
+          </div>
+        </div>
+
+        <div class="table-inner-container">
+          <p-table #dt [value]="qcRecords" [paginator]="true" [rows]="8" [globalFilterFields]="['qcId','jobId','qcType','inspector','result']" responsiveLayout="scroll" styleClass="p-datatable-sm custom-primeng-table users-pro-table">
+            <ng-template pTemplate="header">
+              <tr>
+                <th pSortableColumn="qcId"><div class="header-cell-content"><span>QC ID</span><p-sortIcon field="qcId"></p-sortIcon></div></th>
+                <th pSortableColumn="jobId"><div class="header-cell-content"><span>JOB</span><p-sortIcon field="jobId"></p-sortIcon></div></th>
+                <th pSortableColumn="qcType"><div class="header-cell-content"><span>TYPE</span><p-sortIcon field="qcType"></p-sortIcon></div></th>
+                <th><div class="header-cell-content"><span>GSM / BF Parameters</span></div></th>
+                <th pSortableColumn="inspector"><div class="header-cell-content"><span>INSPECTOR</span><p-sortIcon field="inspector"></p-sortIcon></div></th>
+                <th pSortableColumn="result"><div class="header-cell-content"><span>RESULT</span><p-sortIcon field="result"></p-sortIcon></div></th>
+                <th style="text-align:center;">ACTIONS</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-qc>
+              <tr>
+                <td><div class="cell-wrapper"><span class="uid-text">{{ qc.qcId }}</span></div></td>
+                <td><div class="cell-wrapper"><span class="role-badge">{{ qc.jobId }}</span></div></td>
+                <td>
+                  <div class="cell-wrapper">
+                    <span class="shift-badge" [ngClass]="{'shift-a': qc.qcType === 'Final QC', 'shift-b': qc.qcType === 'Stage QC'}">
+                      {{ qc.qcType }}
+                    </span>
+                  </div>
+                </td>
+                <td>
+                  <div class="cell-wrapper employee-cell" style="flex-direction:row; gap:16px;">
+                    <span class="employee-name"><strong>GSM:</strong> {{ qc.gsm ?? '—' }}</span>
+                    <span class="employee-code"><strong>BF:</strong> {{ qc.bf ?? '—' }}</span>
+                  </div>
+                </td>
+                <td><div class="cell-wrapper"><span class="dept-badge">{{ qc.inspector }}</span></div></td>
+                <td>
+                  <div class="cell-wrapper">
+                    <span class="status-badge" [ngClass]="{
+                          'status-active':     qc.result === 'Pass',
+                          'status-inactive':   qc.result === 'Fail',
+                          'status-badge-warn': qc.result === 'Rework'
+                        }">
+                      <i [class]="qc.result === 'Pass' ? 'pi pi-check-circle' : qc.result === 'Fail' ? 'pi pi-times-circle' : 'pi pi-refresh'"></i>
+                      {{ qc.result }}
+                    </span>
+                  </div>
+                </td>
+                <td class="actions-cell">
+                  <div class="cell-wrapper">
+                    <div class="action-buttons-group">
+                      <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-rounded p-button-sm action-btn view-btn-icon" (click)="viewQCDetails(qc)" title="View QC Details"></button>
+                      <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-rounded p-button-sm action-btn edit-btn-icon" (click)="editQC(qc)" pTooltip="Edit QC" tooltipPosition="top"></button>
+                      <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-rounded p-button-danger p-button-sm action-btn delete-btn-icon" (click)="confirmDelete($event, qc)" pTooltip="Delete QC" tooltipPosition="top"></button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+              <tr>
+                <td colspan="7" class="empty-table-cell">
+                  <i class="pi pi-check-square empty-icon"></i>
+                  <p>No QC records found.</p>
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <p-dialog [(visible)]="showViewModal" [modal]="true" [closable]="true" [draggable]="false" [resizable]="false" styleClass="emp-view-dialog" [style]="{ width:'640px', maxWidth:'95vw' }">
+    <ng-template pTemplate="header">
+      <div class="modal-header-row">
+        <div class="employee-avatar" style="background: #7a5af8;">
+          <i class="pi pi-check-square" style="color: white; font-size: 1.2rem;"></i>
+        </div>
+        <div class="emp-header-info">
+          <div class="emp-header-name">Job ID: {{ viewQC.jobId }}</div>
+          <div class="emp-header-meta">{{ viewQC.qcId }} &nbsp;|&nbsp; {{ viewQC.qcType }}</div>
+        </div>
+        <span class="status-badge" [ngClass]="{
+          'status-active': viewQC.result === 'Pass',
+          'status-inactive': viewQC.result === 'Fail',
+          'status-badge-warn': viewQC.result === 'Rework'
+        }">
+          {{ viewQC.result }}
+        </span>
+      </div>
+    </ng-template>
+
+    <ng-template pTemplate="content">
+      <div class="view-detail-grid">
+        <div class="view-field">
+          <span class="view-label">QC ID</span>
+          <span class="view-value">{{ viewQC.qcId }}</span>
+        </div>
+        <div class="view-field">
+          <span class="view-label">QC Date</span>
+          <span class="view-value">{{ viewQC.qcDate | date:'yyyy-MM-dd' }}</span>
+        </div>
+        <div class="view-field">
+          <span class="view-label">Job ID</span>
+          <span class="view-value">{{ viewQC.jobId }}</span>
+        </div>
+        <div class="view-field">
+          <span class="view-label">QC Type</span>
+          <span class="view-value">{{ viewQC.qcType }}</span>
+        </div>
+        <div class="view-field">
+          <span class="view-label">GSM (Actual)</span>
+          <span class="view-value">{{ viewQC.gsm ?? '—' }}</span>
+        </div>
+        <div class="view-field">
+          <span class="view-label">BF (Actual)</span>
+          <span class="view-value">{{ viewQC.bf ?? '—' }}</span>
+        </div>
+        <div class="view-field">
+          <span class="view-label">BCT (kg)</span>
+          <span class="view-value">{{ viewQC.bct ?? '—' }}</span>
+        </div>
+        <div class="view-field">
+          <span class="view-label">Moisture (%)</span>
+          <span class="view-value">{{ viewQC.moisture ?? '—' }}</span>
+        </div>
+        <div class="view-field">
+          <span class="view-label">Cobb Test (g/m²)</span>
+          <span class="view-value">{{ viewQC.cobbTest ?? '—' }}</span>
+        </div>
+        <div class="view-field">
+          <span class="view-label">Inspector</span>
+          <span class="view-value">{{ viewQC.inspector || '—' }}</span>
+        </div>
+        <div class="view-field">
+          <span class="view-label">Approved By</span>
+          <span class="view-value">{{ viewQC.approvedBy || '—' }}</span>
+        </div>
+        <div class="view-field full-width">
+          <span class="view-label">Remarks</span>
+          <span class="view-value">{{ viewQC.remarks || '—' }}</span>
+        </div>
+      </div>
+    </ng-template>
+
+    <ng-template pTemplate="footer">
+      <button pButton type="button" label="Edit Record" icon="pi pi-pencil" class="p-button-sm p-button-outlined" (click)="editFromView()"></button>
+      <button pButton type="button" label="Close" icon="pi pi-times" class="p-button-sm p-button-text" (click)="showViewModal=false"></button>
+    </ng-template>
+  </p-dialog>
+
+  <p-dialog [(visible)]="showUserModal" [modal]="true" [closable]="true" [draggable]="false" [resizable]="false" [style]="{ width: '760px', maxWidth: '95vw' }" styleClass="user-form-dialog" [appendTo]="'body'" (onHide)="onModalHide(qcForm)">
+    <ng-template pTemplate="header">
+      <div class="modal-header-content">
+        <span class="modal-title-icon">
+          <i [class]="isEditMode ? 'pi pi-pencil' : 'pi pi-check-square'"></i>
+        </span>
+        <div>
+          <h3 class="modal-title-text">{{ isEditMode ? 'Update QC Record' : 'Log QC Entry' }}</h3>
+          <p class="modal-subtitle-text">{{ isEditMode ? 'Modify inspection details' : 'Record quality check parameters and result specifications' }}</p>
+        </div>
+      </div>
+    </ng-template>
+
+    <form (ngSubmit)="saveQC(qcForm)" #qcForm="ngForm" class="user-form-content">
+      <div class="form-fields-wrapper">
+        <div class="form-row-grid">
+          <div class="form-field">
+            <label class="field-label">QC ID</label>
+            <input type="text" name="qcId" class="form-input-control disabled-input" [value]="currentQC.qcId" disabled />
+          </div>
+          <div class="form-field">
+            <label class="field-label">QC DATE</label>
+            <input type="date" name="qcDate" class="form-input-control" [(ngModel)]="currentQC.qcDate" />
+          </div>
+        </div>
+
+        <div class="form-row-grid">
+          <div class="form-field">
+            <label class="field-label">JOB ID <span class="required-star">*</span></label>
+            <input type="text" name="jobId" #jobIdInput="ngModel" [class.um-input-error]="jobIdInput.invalid && (jobIdInput.dirty || jobIdInput.touched || qcForm.submitted)" class="form-input-control" placeholder="e.g. JC-001" [(ngModel)]="currentQC.jobId" required />
+            <div *ngIf="jobIdInput.invalid && (jobIdInput.dirty || jobIdInput.touched || qcForm.submitted)" class="um-error-text">Job ID is required.</div>
+          </div>
+          <div class="form-field">
+            <label class="field-label">QC TYPE <span class="required-star">*</span></label>
+            <p-dropdown name="qcType" [options]="sfQcTypeOptions" [(ngModel)]="currentQC.qcType" [appendTo]="'body'" styleClass="um-primeng-dd" required></p-dropdown>
+          </div>
+        </div>
+
+        <div class="form-row-grid">
+          <div class="form-field">
+            <label class="field-label">GSM (ACTUAL)</label>
+            <input type="number" name="gsm" class="form-input-control" placeholder="216" [(ngModel)]="currentQC.gsm" />
+          </div>
+          <div class="form-field">
+            <label class="field-label">BF (ACTUAL)</label>
+            <input type="number" name="bf" class="form-input-control" placeholder="22.10" step="0.01" [(ngModel)]="currentQC.bf" />
+          </div>
+        </div>
+
+        <div class="form-row-grid">
+          <div class="form-field">
+            <label class="field-label">BCT (kg)</label>
+            <input type="number" name="bct" class="form-input-control" placeholder="450" [(ngModel)]="currentQC.bct" />
+          </div>
+          <div class="form-field">
+            <label class="field-label">MOISTURE (%)</label>
+            <input type="number" name="moisture" class="form-input-control" placeholder="11.3" step="0.1" [(ngModel)]="currentQC.moisture" />
+          </div>
+        </div>
+
+        <div class="form-row-grid">
+          <div class="form-field">
+            <label class="field-label">COBB TEST (g/m²)</label>
+            <input type="number" name="cobbTest" class="form-input-control" placeholder="80" [(ngModel)]="currentQC.cobbTest" />
+          </div>
+          <div class="form-field">
+            <label class="field-label">INSPECTOR</label>
+            <input type="text" name="inspector" class="form-input-control" placeholder="Inspector name" [(ngModel)]="currentQC.inspector" />
+          </div>
+        </div>
+
+        <div class="form-row-grid">
+          <div class="form-field">
+            <label class="field-label">RESULT <span class="required-star">*</span></label>
+            <p-dropdown name="result" [options]="resultOptions" [(ngModel)]="currentQC.result" [appendTo]="'body'" styleClass="um-primeng-dd" required></p-dropdown>
+          </div>
+          <div class="form-field">
+            <label class="field-label">APPROVED BY</label>
+            <input type="text" name="approvedBy" class="form-input-control" placeholder="Approver name" [(ngModel)]="currentQC.approvedBy" />
+          </div>
+        </div>
+
+        <div class="form-field" style="margin-top: 12px;">
+          <label class="field-label">REMARKS</label>
+          <textarea name="remarks" class="form-input-control" rows="2" placeholder="QC remarks or rejection reason..." [(ngModel)]="currentQC.remarks" style="resize:vertical; min-height:54px;"></textarea>
+        </div>
+      </div>
+
+      <div class="form-actions-bar">
+        <button type="button" class="action-btn-ctrl cancel-btn" (click)="closeModal(qcForm)">Cancel</button>
+        <button type="submit" class="action-btn-ctrl save-btn">{{ isEditMode ? 'Update QC' : 'Save QC Entry' }}</button>
+      </div>
+    </form>
+  </p-dialog>
+
+</div>
+
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>

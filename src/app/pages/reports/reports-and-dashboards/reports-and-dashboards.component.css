@@ -1,0 +1,223 @@
+/* Reports & Dashboards component styles */
+.card {
+  padding: 1.5rem;
+  background: var(--card-bg, #ffffff);
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Redesigned filter and export buttons */
+:host ::ng-deep .btn-report-apply,
+:host ::ng-deep .btn-report-excel,
+:host ::ng-deep .btn-report-pdf {
+  height: 36px !important;
+  padding: 0 10px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  border: 1px solid transparent !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.2s ease-in-out !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+}
+
+/* Apply button - clean modern soft blue outline style */
+:host ::ng-deep .btn-report-apply {
+  background-color: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid #bfdbfe !important;
+}
+
+:host ::ng-deep .btn-report-apply:hover {
+  background-color: #dbeafe !important;
+  color: #1e40af !important;
+  border-color: #93c5fd !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1), 0 2px 4px -1px rgba(59, 130, 246, 0.06) !important;
+}
+
+:host ::ng-deep .btn-report-apply:active {
+  transform: translateY(0px) !important;
+}
+
+/* Export Excel - clean modern soft green style */
+:host ::ng-deep .btn-report-excel {
+  background-color: #ecfdf5 !important;
+  color: #047857 !important;
+  border: 1px solid #a7f3d0 !important;
+}
+
+:host ::ng-deep .btn-report-excel:hover {
+  background-color: #d1fae5 !important;
+  color: #065f46 !important;
+  border-color: #6ee7b7 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.1), 0 2px 4px -1px rgba(16, 185, 129, 0.06) !important;
+}
+
+:host ::ng-deep .btn-report-excel:active {
+  transform: translateY(0px) !important;
+}
+
+/* Export PDF - clean modern soft red style */
+:host ::ng-deep .btn-report-pdf {
+  background-color: #fff1f2 !important;
+  color: #be123c !important;
+  border: 1px solid #fecdd3 !important;
+}
+
+:host ::ng-deep .btn-report-pdf:hover {
+  background-color: #ffe4e6 !important;
+  color: #9f1239 !important;
+  border-color: #fda4af !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 6px -1px rgba(244, 63, 94, 0.1), 0 2px 4px -1px rgba(244, 63, 94, 0.06) !important;
+}
+
+:host ::ng-deep .btn-report-pdf:active {
+  transform: translateY(0px) !important;
+}
+
+/* Standard icon styling spacing */
+:host ::ng-deep .btn-report-apply .p-button-icon,
+:host ::ng-deep .btn-report-excel .p-button-icon,
+:host ::ng-deep .btn-report-pdf .p-button-icon {
+  margin-right: 4px !important;
+  font-size: 14px !important;
+}
+
+/* Layout responsiveness for reports page filter bar */
+:host ::ng-deep .report-filter-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  flex-wrap: nowrap !important; /* Force single line on desktop */
+  width: 100% !important;
+}
+
+:host ::ng-deep .report-tab-group {
+  display: flex !important;
+  gap: 4px !important;
+  flex-wrap: nowrap !important; /* Force tabs in single line */
+  flex: 1 !important; /* Take remaining space */
+  overflow-x: auto !important; /* Scroll horizontally if tabs don't fit */
+  scrollbar-width: none !important; /* Hide scrollbar for Firefox */
+  -webkit-overflow-scrolling: touch !important;
+}
+
+:host ::ng-deep .report-tab-group::-webkit-scrollbar {
+  display: none !important; /* Hide scrollbar for Safari/Chrome */
+}
+
+:host ::ng-deep .report-filter-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-wrap: nowrap !important; /* Force date inputs and buttons in single line */
+  flex-shrink: 0 !important; /* Do not shrink buttons */
+}
+
+/* Compact tab buttons on desktop */
+:host ::ng-deep .report-tab-btn {
+  padding: 6px 10px !important;
+  font-size: 11px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Make date inputs slightly narrower to fit on standard desktops */
+:host ::ng-deep .report-filter-actions .form-input-control {
+  width: 115px !important;
+  padding: 8px 8px !important;
+  font-size: 12px !important;
+  height: 36px !important;
+}
+
+/* Media Queries for Tablet and Mobile */
+@media screen and (max-width: 1024px) {
+  :host ::ng-deep .report-filter-bar {
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+  }
+  
+  :host ::ng-deep .report-tab-group {
+    width: 100% !important;
+    flex: none !important;
+  }
+  
+  /* Make tab buttons equally spaced on tablet view */
+  :host ::ng-deep .report-tab-btn {
+    flex: 1 !important;
+    text-align: center !important;
+    justify-content: center !important;
+    padding: 8px 6px !important;
+    font-size: 11px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+  
+  :host ::ng-deep .report-filter-actions {
+    width: 100% !important;
+    justify-content: flex-start !important;
+    flex-wrap: nowrap !important;
+  }
+  
+  :host ::ng-deep .report-filter-actions .form-input-control {
+    width: 125px !important;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  /* On mobile, let tab buttons scroll naturally to prevent text from being squished */
+  :host ::ng-deep .report-tab-btn {
+    flex: 0 0 auto !important;
+    padding: 6px 12px !important;
+    font-size: 11px !important;
+  }
+
+  /* On mobile, wrap filter actions */
+  :host ::ng-deep .report-filter-actions {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+  
+  :host ::ng-deep .report-filter-actions .form-field {
+    flex: 1 !important;
+    min-width: 110px !important;
+  }
+  
+  :host ::ng-deep .report-filter-actions .form-input-control {
+    width: 100% !important;
+  }
+  
+  :host ::ng-deep .btn-report-apply,
+  :host ::ng-deep .btn-report-excel,
+  :host ::ng-deep .btn-report-pdf {
+    flex: 1 !important;
+    justify-content: center !important;
+    min-width: 100px !important;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  /* Ultra-small mobile stacking */
+  :host ::ng-deep .report-filter-actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  
+  :host ::ng-deep .report-filter-actions .form-field {
+    width: 100% !important;
+  }
+  
+  :host ::ng-deep .btn-report-apply,
+  :host ::ng-deep .btn-report-excel,
+  :host ::ng-deep .btn-report-pdf {
+    width: 100% !important;
+  }
+}

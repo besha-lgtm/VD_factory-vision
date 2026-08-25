@@ -1,0 +1,415 @@
+/* ── Status filter tabs ──────────────────────────────────────────── */
+.inv-status-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  background: var(--surface-100, #f1f5f9);
+  padding: 4px;
+  border-radius: 7px;
+}
+.inv-status-btn {
+  border: none;
+  background: transparent;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--text-color-secondary, #667085);
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.inv-status-btn:hover { background: var(--surface-0, #fff); color: var(--text-color, #101828); }
+.inv-status-btn.active {
+  background: var(--surface-0, #fff);
+  color: var(--primary-color, #4361ee);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* ── Table cell helpers ──────────────────────────────────────────── */
+.inv-total-amt {
+  font-weight: 700;
+  color: var(--primary-color, #4361ee);
+  font-size: 0.82rem;
+}
+
+.inv-invoice-no {
+  font-family: monospace;
+  font-weight: 700;
+  color: #12b76a;
+  font-size: 0.82rem;
+}
+
+.inv-not-invoiced {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary, #94a3b8);
+  font-style: italic;
+}
+
+/* ── View modal section headers ──────────────────────────────────── */
+.inv-section-label {
+  font-size: 0.7rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.07em !important;
+  text-transform: uppercase !important;
+  color: var(--primary-color, #4361ee) !important;
+  padding: 6px 0 2px !important;
+  border-bottom: 1px solid var(--surface-200, #f2f4f7) !important;
+  margin-top: 4px !important;
+  grid-column: span 2;
+}
+
+/* ── warn badge ──────────────────────────────────────────────────── */
+.status-badge-warn {
+  background: #fffaeb !important;
+  color: #b54708 !important;
+  border: 1px solid #fec84b !important;
+}
+
+/* ── TBD / AUTO tag ──────────────────────────────────────────────── */
+.field-tbd-tag {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #b54708;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: 4px;
+  vertical-align: middle;
+  line-height: 1.4;
+}
+
+
+ .emp-section-divider {
+    display: flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgb(7, 148, 173);
+    margin-bottom: 4px;
+    gap: 8px;
+    padding: 6px 0px 4px;
+    border-bottom: 1px dashed rgb(185, 232, 241);
+}
+
+
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   TAX INVOICE VIEW & PRINT STRUCTURE
+   ───────────────────────────────────────────────────────────────────────── */
+.tax-invoice-container {
+  padding: 16px;
+  background: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  color: #101828;
+  font-size: 11px;
+  line-height: 1.4;
+  border: 1px solid #101828;
+}
+
+.inv-print-top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-bottom: 2px solid #101828;
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+}
+
+.inv-print-title {
+  font-size: 18px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.inv-print-copy-tag {
+  font-size: 10px;
+  font-style: italic;
+  font-weight: 600;
+}
+
+.inv-print-type {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.inv-print-system-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #101828;
+  padding: 6px;
+  margin-bottom: 8px;
+}
+
+.inv-print-irn-block {
+  font-size: 10px;
+  line-height: 1.5;
+  max-width: 80%;
+}
+
+.mono-text {
+  font-family: monospace;
+  word-break: break-all;
+  font-size: 9.5px;
+}
+
+/* Master Grid Structure Setup */
+.inv-print-master-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #101828;
+}
+
+.inv-print-master-table td {
+  padding: 5px;
+}
+
+/* Nested Grid Layout Utilities */
+.nested-fields-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: -5px;
+}
+
+.nested-fields-table td {
+  padding: 4px 6px;
+  vertical-align: top;
+}
+
+/* Helper Boundaries */
+.border-right { border-right: 1px solid #101828; }
+.border-bottom { border-bottom: 1px solid #101828; }
+.border-top { border-top: 1px solid #101828; }
+.align-top { vertical-align: top; }
+.width-50 { width: 50%; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-left { text-align: left; }
+.font-bold { font-weight: 700; }
+.padded-cell { padding: 6px !important; }
+.bg-light-gray { background-color: #f9fafb; }
+
+.field-lbl {
+  display: block;
+  font-size: 9px;
+  color: #475467;
+  text-transform: capitalize;
+}
+
+.field-val {
+  font-size: 11px;
+}
+
+.company-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.party-name {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.address-text {
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+/* Goods Line Items formatting styles */
+.item-header-row td {
+  font-weight: 700;
+  font-size: 10px;
+  background: #f2f4f7;
+  text-transform: uppercase;
+}
+
+.item-data-row td {
+  padding: 6px 5px;
+}
+
+.goods-desc {
+  display: block;
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+.goods-sub-code {
+  font-size: 10px;
+  color: #475467;
+}
+
+.tax-breakdown-inline {
+  margin-top: 8px;
+  padding-left: 12px;
+}
+
+.tax-inline-row {
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.tax-inline-val {
+  font-size: 10px;
+  line-height: 1.5;
+  margin-top: 2px;
+}
+
+.total-summary-row td {
+  padding: 6px 5px;
+  background: #f9fafb;
+}
+
+/* Bottom HSN breakdown layout grid formatting styling features */
+.hsn-summary-inner-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+
+.hsn-summary-inner-table th {
+  background: #f2f4f7;
+  font-weight: 700;
+  padding: 4px;
+  text-align: center;
+}
+
+.hsn-summary-inner-table td {
+  padding: 4px 6px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   STRICT NATIVE BROWSER PRINT CSS CONFIGURATIONS
+   ───────────────────────────────────────────────────────────────────────── */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  #printable-tax-invoice,
+  #printable-tax-invoice * {
+    visibility: visible;
+  }
+  
+  #printable-tax-invoice {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: 1px solid #000000 !important;
+    padding: 0px !important;
+    margin: 0px !important;
+  }
+  
+  .tax-invoice-container {
+    border: 1px solid #000000 !important;
+  }
+
+  /* Force background rendering inside print setup window frames natively */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+/* Footer Layout */
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #eef2f7;
+}
+
+/* Common Button Style */
+.dialog-footer .p-button {
+    height: 40px;
+    padding: 0 18px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.25s ease;
+    box-shadow: none;
+}
+
+/* Print Button */
+.print-btn.p-button {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    border: none;
+    color: #fff;
+}
+
+.print-btn.p-button:hover {
+    background: linear-gradient(135deg, #15803d, #16a34a);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(34, 197, 94, 0.25);
+}
+
+/* Close Button */
+.close-btn.p-button {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    color: #4b5563;
+}
+
+.close-btn.p-button:hover {
+    background: #f8fafc;
+    border-color: #9ca3af;
+    color: #111827;
+    transform: translateY(-1px);
+}
+
+/* Icons */
+.dialog-footer .p-button .pi {
+    font-size: 14px;
+}
+.company-header{
+    display:flex;
+    align-items:center;      /* instead of flex-start */
+    gap:14px;
+}
+
+.company-logo{
+    width:72px;
+    height:auto;
+    object-fit:contain;
+    flex-shrink:0;
+}
+
+.company-info{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+}
+.company-title{
+    font-size:22px;
+    font-weight:800;
+    letter-spacing:.5px;
+    color:#0f172a;
+    margin-bottom:6px;
+}
+.address-text{
+    margin-top:6px;
+    font-size:11px;
+    line-height:1.45;
+}
+.company-header{
+    border-bottom:1px solid #d8dde5;
+    padding-bottom:8px;
+    margin-bottom:8px;
+}
+.company-cell{
+    padding:10px 12px;
+}

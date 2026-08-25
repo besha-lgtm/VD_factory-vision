@@ -1,0 +1,20 @@
+/* Customer Master custom styles */
+
+.contact-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.contact-card:hover {
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  background-color: #ffffff !important;
+}
+
+.empty-contacts-placeholder {
+  transition: all 0.2s ease-in-out;
+}
+
+.empty-contacts-placeholder:hover {
+  border-color: #4f46e5 !important;
+  background-color: #fafbfb !important;
+}

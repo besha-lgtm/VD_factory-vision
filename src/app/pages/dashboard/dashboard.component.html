@@ -1,44 +1,121 @@
-<div class="app-dashboard-layout">
+<div class="db-container">
 
-    <!-- Header -->
-    <app-header></app-header>
-
-    <!-- Main Layout -->
-    <div class="app-dashboard-body">
-
-        <!-- Sidebar -->
-        <app-sidebar></app-sidebar>
-
-        <!-- Content Area -->
-        <main class="app-dashboard-content">
-
-            <div class="app-dashboard-welcome-section">
-
-                <h1>Welcome to Smart Warehouse Automation System</h1>
-
-                <!-- <p>
-                    Simplify warehouse operations with intelligent automation, real-time inventory visibility,
-                    efficient purchase order management, QR-enabled receiving, and seamless stock tracking—all
-                    from one centralized dashboard.
-                </p> -->
-
-            </div>
-
-            <!-- Stats Grid -->
-            <div class="dashboard-stats-grid">
-                <div class="dashboard-stat-card" *ngFor="let stat of stats">
-                    <div class="dashboard-stat-icon-wrapper" [style.background-color]="stat.color + '15'">
-                        <i [class]="stat.icon" [style.color]="stat.color"></i>
-                    </div>
-                    <div class="dashboard-stat-info">
-                        <span class="dashboard-stat-label">{{ stat.label }}</span>
-                        <h3 class="dashboard-stat-value" [style.color]="stat.color">{{ stat.value }}</h3>
-                    </div>
-                </div>
-            </div>
-
-        </main>
-
+  <!-- ============================================
+     SECTION 1: DASHBOARD HEADER
+     ============================================ -->
+  <div class="db-header-section">
+    <div class="db-title-area">
+      <h1 class="db-title">Visipak Production Planning Dashboard</h1>
+      <p class="db-subtitle">Order to dispatch visibility across planning, stock, production, QC and dispatch.</p>
     </div>
+
+
+  </div>
+
+  <!-- ============================================
+     SECTION 2: KPI STATS GRID
+     ============================================ -->
+  <div class="db-kpi-section">
+    <div class="db-kpi-grid">
+      <div *ngFor="let kpi of kpis; let i = index" class="db-kpi-card">
+        <div class="db-kpi-info">
+          <span class="db-kpi-label">{{ kpi.label }}</span>
+          <div class="db-kpi-value-row">
+            <span class="db-kpi-value">{{ kpi.value }}</span>
+          </div>
+          <span class="db-kpi-subtitle">{{ kpi.subtitle }}</span>
+        </div>
+        <div class="db-kpi-icon-wrapper" [ngClass]="kpi.colorClass">
+          <i [class]="kpi.icon"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+     SECTION 3: CONFIRMED BUSINESS FLOW
+     ============================================ -->
+  <!-- <div class="db-flow-section">
+    <div class="db-flow-card">
+      <div class="db-flow-header">
+        <h3 class="db-flow-title">Confirmed Business Flow</h3>
+        <p class="db-flow-subtitle">Client PO to Dispatch Closure</p>
+      </div>
+      <div class="db-flow-steps-container">
+        <ng-container *ngFor="let step of flowSteps; let last = last">
+          <div class="db-flow-step">
+            {{ step.label }}
+          </div>
+          <div *ngIf="!last" class="db-flow-arrow">
+            <i class="pi pi-arrow-right"></i>
+          </div>
+        </ng-container>
+      </div>
+    </div>
+  </div> -->
+
+  <!-- BOTTOM GRID LAYOUT FOR SECTIONS 4 & 5 -->
+  <div class="db-bottom-grid">
+
+    <!-- ============================================
+       SECTION 4: TODAY'S PRIORITY JOBS TABLE
+       ============================================ -->
+    <div class="db-jobs-section">
+      <div class="db-jobs-card">
+        <div class="db-jobs-header">
+          <h3 class="db-jobs-title">Today's Priority Jobs</h3>
+          <p class="db-jobs-subtitle">Jobs generated from customer PO lines</p>
+        </div>
+        
+        <div class="db-table-wrapper">
+          <table class="db-table">
+            <thead>
+              <tr>
+                <th>JOB ID</th>
+                <th>CUSTOMER</th>
+                <th>ITEM</th>
+                <th>REQ QTY</th>
+                <th>DECISION</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let job of priorityJobs">
+                <td class="job-id-cell">{{ job.jobId }}</td>
+                <td>{{ job.customer }}</td>
+                <td>{{ job.item }}</td>
+                <td>{{ job.reqQty }}</td>
+                <td>
+                  <span class="db-badge" [ngClass]="job.decisionClass">
+                    {{ job.decision }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================
+       SECTION 5: ALERTS PANEL
+       ============================================ -->
+    <div class="db-alerts-section">
+      <div class="db-alerts-card">
+        <div class="db-alerts-header">
+          <h3 class="db-alerts-title">Alerts</h3>
+          <p class="db-alerts-subtitle">Stock and validation alerts</p>
+        </div>
+        <div class="db-alerts-list">
+          <div *ngFor="let alert of alerts" class="db-alert-item">
+            <span class="db-alert-badge" [ngClass]="alert.typeClass">
+              {{ alert.type }}
+            </span>
+            <span class="db-alert-text">{{ alert.text }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
 
 </div>

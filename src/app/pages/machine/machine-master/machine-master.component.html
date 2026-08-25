@@ -1,0 +1,421 @@
+<div class="machine-master-container">
+
+  <!-- ========================================================================
+       SEARCH & FILTER PANEL
+       ======================================================================== -->
+  <div class="card filter-card">
+    <div class="filter-header-row">
+      <h2 class="card-title">Search / Filter</h2>
+      <div class="header-action-buttons">
+        <input 
+          type="file" 
+          #fileInput 
+          style="display: none" 
+          accept=".csv" 
+          (change)="handleFileImport($event)">
+        <button class="btn btn-green" (click)="addMachine()">
+          <i class="pi pi-plus"></i> Add Machine
+        </button>
+        <button class="btn btn-outline" (click)="fileInput.click()">
+          <i class="pi pi-upload"></i> Import
+        </button>
+        <button class="btn btn-outline" (click)="exportData()">
+          <i class="pi pi-download"></i> Export
+        </button>
+      </div>
+    </div>
+
+    <div class="filter-grid">
+      <div class="filter-field">
+        <label>Plant</label>
+        <select [(ngModel)]="activePlant" (change)="onPlantFilterChange()">
+          <option *ngFor="let plant of plants" [value]="plant">{{ plant }}</option>
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label>Machine Category</label>
+        <select [(ngModel)]="filters.category">
+          <option *ngFor="let opt of categories" [value]="opt">{{ opt }}</option>
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label>Machine Type</label>
+        <select [(ngModel)]="filters.type">
+          <option *ngFor="let opt of types" [value]="opt">{{ opt }}</option>
+        </select>
+      </div>
+
+      <div class="filter-field flex-grow-2">
+        <label>Machine Code / Name</label>
+        <div class="search-input-wrapper">
+          <input type="text" placeholder="Search machine code / name" [(ngModel)]="filters.codeOrName">
+        </div>
+      </div>
+
+      <div class="filter-field">
+        <label>Status</label>
+        <select [(ngModel)]="filters.status">
+          <option *ngFor="let opt of statuses" [value]="opt">{{ opt }}</option>
+        </select>
+      </div>
+
+      <div class="filter-buttons">
+        <button class="btn btn-blue" (click)="onSearch()">
+          <i class="pi pi-search"></i> Search
+        </button>
+        <button class="btn btn-reset" (click)="onReset()">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MAIN INFO ROW (Machine Info + Machine Photo)
+       ======================================================================== -->
+  <div class="info-photo-row">
+
+    <!-- Machine Info Column -->
+    <div class="card info-card">
+      <h2 class="card-title section-title">Machine Information</h2>
+
+      <!-- View Mode -->
+      <div class="info-grid" *ngIf="!isEditing">
+        <div class="info-item">
+          <span class="info-label">Machine Code <span class="required">*</span></span>
+          <span class="info-value font-semibold">{{ machineInfo.code }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Line / Unit</span>
+          <span class="info-value">{{ machineInfo.lineUnit }}</span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Machine Name <span class="required">*</span></span>
+          <span class="info-value font-semibold">{{ machineInfo.name }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Plant <span class="required">*</span></span>
+          <span class="info-value font-semibold">{{ machineInfo.plant }}</span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Machine Category <span class="required">*</span></span>
+          <span class="info-value">{{ machineInfo.category }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Location</span>
+          <span class="info-value">{{ machineInfo.location }}</span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Machine Type <span class="required">*</span></span>
+          <span class="info-value">{{ machineInfo.type }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Running Type</span>
+          <span class="info-value">{{ machineInfo.runningType }}</span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Make / Brand</span>
+          <span class="info-value">{{ machineInfo.brand }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Rated Speed</span>
+          <span class="info-value">{{ machineInfo.ratedSpeed }}</span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Model</span>
+          <span class="info-value">{{ machineInfo.model }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Effective Width</span>
+          <span class="info-value">{{ machineInfo.effectiveWidth }}</span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Serial Number</span>
+          <span class="info-value">{{ machineInfo.serialNumber }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Status <span class="required">*</span></span>
+          <span class="status-badge" [class.active]="machineInfo.status === 'Active'">
+            {{ machineInfo.status }}
+          </span>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Installation Date</span>
+          <span class="info-value">{{ machineInfo.installationDate | date:'dd/MM/yyyy' }}</span>
+        </div>
+        <div class="info-item col-span-2-mobile">
+          <span class="info-label">Remarks</span>
+          <span class="info-value italic">{{ machineInfo.remarks }}</span>
+        </div>
+      </div>
+
+      <!-- Edit Mode -->
+      <div class="info-grid" *ngIf="isEditing">
+        <div class="info-item">
+          <span class="info-label">Machine Code <span class="required">*</span></span>
+          <input type="text" [(ngModel)]="editableInfo.code">
+        </div>
+        <div class="info-item">
+          <span class="info-label">Line / Unit</span>
+          <select [(ngModel)]="editableInfo.lineUnit">
+            <option *ngFor="let line of lines" [value]="line">{{ line }}</option>
+          </select>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Machine Name <span class="required">*</span></span>
+          <input type="text" [(ngModel)]="editableInfo.name">
+        </div>
+        <div class="info-item">
+          <span class="info-label">Plant <span class="required">*</span></span>
+          <select [(ngModel)]="editableInfo.plant">
+            <option *ngFor="let plant of plants" [value]="plant">{{ plant }}</option>
+          </select>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Machine Category <span class="required">*</span></span>
+          <select [(ngModel)]="editableInfo.category">
+            <option *ngFor="let opt of categories.slice(1)" [value]="opt">{{ opt }}</option>
+          </select>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Location</span>
+          <input type="text" [(ngModel)]="editableInfo.location">
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Machine Type <span class="required">*</span></span>
+          <select [(ngModel)]="editableInfo.type">
+            <option *ngFor="let opt of types.slice(1)" [value]="opt">{{ opt }}</option>
+          </select>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Running Type</span>
+          <select [(ngModel)]="editableInfo.runningType">
+            <option *ngFor="let opt of runningTypes" [value]="opt">{{ opt }}</option>
+          </select>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Make / Brand</span>
+          <input type="text" [(ngModel)]="editableInfo.brand">
+        </div>
+        <div class="info-item">
+          <span class="info-label">Rated Speed</span>
+          <input type="text" [(ngModel)]="editableInfo.ratedSpeed">
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Model</span>
+          <input type="text" [(ngModel)]="editableInfo.model">
+        </div>
+        <div class="info-item">
+          <span class="info-label">Effective Width</span>
+          <input type="text" [(ngModel)]="editableInfo.effectiveWidth">
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Serial Number</span>
+          <input type="text" [(ngModel)]="editableInfo.serialNumber">
+        </div>
+        <div class="info-item">
+          <span class="info-label">Status <span class="required">*</span></span>
+          <select [(ngModel)]="editableInfo.status">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+
+        <div class="info-item">
+          <span class="info-label">Installation Date</span>
+          <input type="date" [(ngModel)]="editableInfo.installationDate">
+        </div>
+        <div class="info-item col-span-2-mobile">
+          <span class="info-label">Remarks</span>
+          <textarea rows="2" [(ngModel)]="editableInfo.remarks"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Machine Photo Column -->
+    <div class="card photo-card">
+      <h2 class="card-title section-title">Machine Photo</h2>
+      <div class="photo-preview-box">
+        
+        <!-- ====================================================================
+             IMAGE PATH INSTRUCTION:
+             To change the path of the machine image displayed below:
+             1. Open the component typescript file at:
+                src/app/pages/master/machine-master/machine-master.component.ts
+             2. Locate the "machinePhotoUrl" property on line 22.
+             3. Update its value to point to your new image path, for example:
+                machinePhotoUrl = 'assets/images/my-custom-machine.png';
+             ==================================================================== -->
+        <img 
+          [src]="machinePhotoUrl" 
+          alt="Machine Photo" 
+          class="machine-image-display" 
+          (error)="machinePhotoUrl = '/assets/images/Machinemaster.png'">
+      </div>
+      <button class="btn btn-change-photo" (click)="changePhoto()">
+        <i class="pi pi-camera"></i> Change Photo
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ========================================================================
+       TAB CONTAINER
+       ======================================================================== -->
+  <div class="tabs-navigation-card">
+    <div class="tabs-scroller">
+      <button 
+        class="tab-btn" 
+        *ngFor="let tab of tabs" 
+        [class.tab-active]="selectedTab === tab"
+        (click)="selectTab(tab)">
+        {{ tab }}
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       TAB CONTENT (Technical Specifications & Process Flow)
+       ======================================================================== -->
+  <div class="tab-content-container" *ngIf="selectedTab === 'Technical Specifications'">
+    <div class="specs-flow-grid">
+
+      <!-- Technical Specifications Left Block -->
+      <div class="card specs-card">
+        <h2 class="card-title section-title border-bottom pb-3">Technical Specifications</h2>
+        
+        <div class="specs-grid">
+          <div class="spec-row" *ngFor="let spec of techSpecs">
+            <span class="spec-label">{{ spec.label }}</span>
+            <div class="spec-value-container">
+              <!-- Regular text -->
+              <span class="spec-value" *ngIf="!spec.isBadges">{{ spec.value }}</span>
+              
+              <!-- Badges/Chips -->
+              <div class="spec-badges-wrapper" *ngIf="spec.isBadges">
+                <span class="flute-badge" *ngFor="let badge of spec.value">
+                  {{ badge }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Process Flow / Stages Right Block -->
+      <div class="card stages-card">
+        <h2 class="card-title section-title border-bottom pb-3">Process Flow / Stages</h2>
+
+        <!-- Horizontal Process Steps Progress -->
+        <div class="process-steps-timeline">
+          <div class="step-item" *ngFor="let step of flowSteps; let last = last">
+            <div class="step-circle" [ngClass]="step.colorClass">
+              {{ step.stepNo }}
+            </div>
+            <span class="step-name">{{ step.name }}</span>
+            <div class="step-connector-line" *ngIf="!last"></div>
+          </div>
+        </div>
+
+        <!-- Stages Grid/Table -->
+        <div class="table-responsive">
+          <table class="stages-table">
+            <thead>
+              <tr>
+                <th class="col-drag"></th>
+                <th class="col-no">Stage No.</th>
+                <th class="col-name">Stage Name</th>
+                <th class="col-type">Stage Type</th>
+                <th class="col-desc">Description</th>
+                <th class="col-action">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let stage of stages" [class.row-inactive]="!stage.active">
+                <td class="col-drag drag-handle">
+                  <i class="pi pi-bars"></i>
+                </td>
+                <td class="col-no font-semibold">{{ stage.stageNo }}</td>
+                <td class="col-name font-semibold">{{ stage.name }}</td>
+                <td class="col-type">{{ stage.type }}</td>
+                <td class="col-desc text-muted">{{ stage.desc }}</td>
+                <td class="col-action">
+                  <!-- Custom styled iOS-style slide toggle switch -->
+                  <label class="switch">
+                    <input type="checkbox" [checked]="stage.active" (change)="toggleStage(stage)">
+                    <span class="slider round"></span>
+                  </label>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Empty state for inactive/placeholder tabs -->
+  <div class="card empty-tab-card" *ngIf="selectedTab !== 'Technical Specifications'">
+    <i class="pi pi-info-circle empty-tab-icon"></i>
+    <h3>{{ selectedTab }} Panel</h3>
+    <p class="text-muted">Currently viewing the draft setup for the {{ selectedTab }} specifications.</p>
+  </div>
+
+  <!-- ========================================================================
+       FOOTER INFORMATION CARD
+       ======================================================================== -->
+  <div class="card footer-card">
+    <div class="footer-info-row">
+      <div class="footer-meta-info">
+        <span class="meta-label">Created By:</span>
+        <span class="meta-value font-semibold">{{ machineInfo.createdBy }}</span>
+        <span class="meta-separator">|</span>
+        <span class="meta-label">Created On:</span>
+        <span class="meta-value font-semibold">{{ machineInfo.createdOn }}</span>
+      </div>
+      <div class="footer-meta-info">
+        <span class="meta-label">Last Updated By:</span>
+        <span class="meta-value font-semibold">{{ machineInfo.lastUpdatedBy }}</span>
+        <span class="meta-separator">|</span>
+        <span class="meta-label">Last Updated On:</span>
+        <span class="meta-value font-semibold">{{ machineInfo.lastUpdatedOn }}</span>
+      </div>
+    </div>
+
+    <!-- Actions Row -->
+    <div class="footer-actions-row">
+      <button class="btn btn-outline" *ngIf="!isEditing" (click)="startEdit()">
+        Edit
+      </button>
+      <button class="btn btn-outline btn-deactivate" *ngIf="!isEditing" (click)="toggleStatus()">
+        {{ machineInfo.status === 'Active' ? 'Deactivate' : 'Activate' }}
+      </button>
+      <button class="btn btn-clone" *ngIf="!isEditing" (click)="cloneMachine()">
+        Clone
+      </button>
+
+      <!-- Edit states -->
+      <button class="btn btn-blue" *ngIf="isEditing" (click)="saveEdit()">
+        Save Changes
+      </button>
+      <button class="btn btn-outline btn-cancel" *ngIf="isEditing" (click)="cancelEdit()">
+        Cancel
+      </button>
+    </div>
+  </div>
+
+</div>
