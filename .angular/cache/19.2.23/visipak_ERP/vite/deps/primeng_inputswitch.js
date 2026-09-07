@@ -1,17 +1,17 @@
 import {
   AutoFocus,
   AutoFocusModule
-} from "./chunk-BO77RBY7.js";
+} from "./chunk-5CPNGOHF.js";
 import {
   NG_VALUE_ACCESSOR
-} from "./chunk-HFEV7BC3.js";
-import "./chunk-BUGEQH7Q.js";
+} from "./chunk-C37BZH6F.js";
+import "./chunk-XGEPVEWY.js";
 import {
   CommonModule,
   NgClass,
   NgStyle
-} from "./chunk-MM6M2NLF.js";
-import "./chunk-QXK5Q6XX.js";
+} from "./chunk-6IVVL5L4.js";
+import "./chunk-PVDIZBF5.js";
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -46,12 +46,13 @@ import {
   ɵɵresetView,
   ɵɵrestoreView,
   ɵɵviewQuery
-} from "./chunk-3GACGZJ4.js";
-import "./chunk-FFZIAYYX.js";
-import "./chunk-6Q4RANH6.js";
-import "./chunk-CXCX2JKZ.js";
+} from "./chunk-HEAWMZEB.js";
+import "./chunk-MD4MEXAA.js";
+import "./chunk-CGJMYSBH.js";
+import "./chunk-TYOVXHQK.js";
+import "./chunk-4MWRP73S.js";
 
-// node_modules/primeng/fesm2022/primeng-inputswitch.mjs
+// ../../../node_modules/primeng/fesm2022/primeng-inputswitch.mjs
 var _c0 = ["input"];
 var _c1 = (a0, a1, a2) => ({
   "p-inputswitch p-component": true,

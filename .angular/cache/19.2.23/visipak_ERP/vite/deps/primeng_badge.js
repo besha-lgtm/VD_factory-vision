@@ -1,19 +1,19 @@
 import {
   DomHandler
-} from "./chunk-BUGEQH7Q.js";
+} from "./chunk-XGEPVEWY.js";
 import {
   CommonModule,
   NgClass,
   NgIf,
   NgStyle
-} from "./chunk-MM6M2NLF.js";
+} from "./chunk-6IVVL5L4.js";
 import {
   DOCUMENT
-} from "./chunk-QXK5Q6XX.js";
+} from "./chunk-PVDIZBF5.js";
 import {
   SharedModule,
   UniqueComponentId
-} from "./chunk-5OUMYVAS.js";
+} from "./chunk-5732XIZK.js";
 import {
   ChangeDetectionStrategy,
   Component,
@@ -41,12 +41,13 @@ import {
   ɵɵtemplate,
   ɵɵtext,
   ɵɵtextInterpolate
-} from "./chunk-3GACGZJ4.js";
-import "./chunk-FFZIAYYX.js";
-import "./chunk-6Q4RANH6.js";
-import "./chunk-CXCX2JKZ.js";
+} from "./chunk-HEAWMZEB.js";
+import "./chunk-MD4MEXAA.js";
+import "./chunk-CGJMYSBH.js";
+import "./chunk-TYOVXHQK.js";
+import "./chunk-4MWRP73S.js";
 
-// node_modules/primeng/fesm2022/primeng-badge.mjs
+// ../../../node_modules/primeng/fesm2022/primeng-badge.mjs
 function Badge_span_0_Template(rf, ctx) {
   if (rf & 1) {
     ɵɵelementStart(0, "span", 1);

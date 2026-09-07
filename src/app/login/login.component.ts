@@ -153,7 +153,7 @@ export class LoginComponent {
         // Update auth state in service by bypassing private property constraints
         (this.loginService as any)._isLoggedIn.next(true);
         this.loading = false;
-        this.router.navigate(['/dashboard']);
+        this.router.navigate(['/factory-monitoring']);
       } else if (email === 'user@gmail.com' && password === userPassword) {
         sessionStorage.setItem('token', 'static-user-token');
         sessionStorage.setItem('userRole', 'User');

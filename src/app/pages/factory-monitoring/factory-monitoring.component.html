@@ -1,0 +1,191 @@
+<div class="db-container">
+
+  <!-- ============================================
+     SECTION 1: DASHBOARD HEADER
+     ============================================ -->
+  <div class="db-header-section">
+    <div class="db-title-area">
+      <div class="db-title-wrapper">
+        <h1 class="db-title">Visipak ML Machine Vision Monitor</h1>
+        <span class="db-status-pill" [ngClass]="isModelLoading ? 'pill-warning' : 'pill-success'">
+          <span class="status-dot"></span>
+          {{ isModelLoading ? 'Model Loading' : 'System Active' }}
+        </span>
+      </div>
+      <p class="db-subtitle">Model-driven inference using custom dataset</p>
+    </div>
+  </div>
+
+  <!-- ============================================
+     SECTION 2: MAIN GRID
+     ============================================ -->
+  <div class="db-bottom-grid">
+
+    <!-- UPLOAD & CAMERA FEED SECTION -->
+    <div class="db-jobs-section">
+      <div class="db-jobs-card">
+        <div class="db-jobs-header">
+          <div>
+            <h3 class="db-jobs-title">Camera Feed Analysis</h3>
+            <p class="db-jobs-subtitle">Upload or stream floor camera frame for real-time analysis</p>
+          </div>
+          <div class="db-header-badge" [ngClass]="{'is-active': selectedImage}">
+            <i class="pi pi-video"></i>
+            <span>{{ selectedImage ? 'Frame Loaded' : 'No Input' }}</span>
+          </div>
+        </div>
+        
+        <div class="upload-container">
+          <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*" hidden />
+          
+          <!-- Dropzone State: Before Upload -->
+          <div class="upload-dropzone" *ngIf="!selectedImage" (click)="fileInput.click()">
+            <div class="upload-icon-wrapper">
+              <i class="pi pi-cloud-upload"></i>
+            </div>
+            <div class="upload-text-group">
+              <span class="upload-primary-text">Click to upload factory floor snap</span>
+              <span class="upload-secondary-text">Supports JPG, PNG, WEBP (Max 10MB)</span>
+            </div>
+            <button class="upload-btn" [disabled]="isModelLoading">
+              <i class="pi pi-upload"></i> Select Image
+            </button>
+          </div>
+
+          <!-- Preview & Active Analysis State -->
+          <div class="image-preview-wrapper" *ngIf="selectedImage">
+            <div class="image-frame">
+              <img #previewImg [src]="selectedImage" alt="Factory Floor Snap" (load)="runModelInference()" class="preview-img" />
+              
+              <!-- Scanning Overlay Animation -->
+              <div class="scanner-line" *ngIf="isAnalyzing"></div>
+            </div>
+
+            <!-- Analysis Status Footer -->
+            <div class="preview-actions">
+              <div class="analysis-status" *ngIf="isAnalyzing">
+                <span class="spinner"></span>
+                <span>Running neural network analysis...</span>
+              </div>
+              <div class="analysis-status status-complete" *ngIf="!isAnalyzing">
+                <i class="pi pi-check-circle"></i>
+                <span>Inference Complete</span>
+              </div>
+              <button class="reupload-btn" (click)="fileInput.click()" [disabled]="isAnalyzing">
+                <i class="pi pi-refresh"></i> Replace Image
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ML MODEL RESULTS & ALERTS -->
+    <div class="db-alerts-section">
+
+      <!-- DETECTED STATUS METRICS -->
+      <div class="db-alerts-card" *ngIf="selectedImage && !isAnalyzing">
+        <div class="db-alerts-header">
+          <div>
+            <h3 class="db-alerts-title">ML Dataset Output</h3>
+            <p class="db-alerts-subtitle">Real-time classification outcomes</p>
+          </div>
+          <span class="confidence-tag"><i class="pi pi-shield"></i> High Confidence</span>
+        </div>
+
+        <div class="db-table-wrapper">
+          <table class="db-table">
+            <thead>
+              <tr>
+                <th>CHECKPOINT</th>
+                <th class="text-right">INFERRED STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="checkpoint-name">
+                  <i class="pi pi-cog"></i> Machine Running
+                </td>
+                <td class="text-right">
+                  <span class="db-badge" [ngClass]="detectedStatus.machineRunning ? 'badge-success' : 'badge-neutral'">
+                    <span class="badge-dot"></span>
+                    {{ detectedStatus.machineRunning ? 'RUNNING' : 'STOPPED' }}
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td class="checkpoint-name">
+                  <i class="pi pi-box"></i> Product Present
+                </td>
+                <td class="text-right">
+                  <span class="db-badge" [ngClass]="detectedStatus.productPresent ? 'badge-success' : 'badge-neutral'">
+                    <span class="badge-dot"></span>
+                    {{ detectedStatus.productPresent ? 'DETECTED' : 'MISSING' }}
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td class="checkpoint-name">
+                  <i class="pi pi-bolt"></i> Signal Light
+                </td>
+                <td class="text-right">
+                  <span class="db-badge" [ngClass]="detectedStatus.lightGreen ? 'badge-success' : 'badge-danger'">
+                    <span class="badge-dot"></span>
+                    {{ detectedStatus.lightGreen ? 'GREEN' : 'RED / OFF' }}
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td class="checkpoint-name">
+                  <i class="pi pi-user"></i> Operator Presence
+                </td>
+                <td class="text-right">
+                  <span class="db-badge" [ngClass]="detectedStatus.operatorPresent ? 'badge-success' : 'badge-danger'">
+                    <span class="badge-dot"></span>
+                    {{ detectedStatus.operatorPresent ? 'PRESENT' : 'ABSENT' }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ALERTS LIST GENERATED FROM ML INFERENCE -->
+      <div class="db-alerts-card" *ngIf="alerts.length > 0">
+        <div class="db-alerts-header">
+          <div>
+            <h3 class="db-alerts-title">System Alerts</h3>
+            <p class="db-alerts-subtitle">Triggered by model detection</p>
+          </div>
+          <span class="alert-count">{{ alerts.length }} Active</span>
+        </div>
+
+        <div class="db-alerts-list">
+          <div *ngFor="let alert of alerts" class="db-alert-item" [ngClass]="alert.typeClass">
+            <span class="db-alert-badge">
+              <i class="pi" [ngClass]="{
+                'pi-exclamation-triangle': alert.typeClass.includes('danger') || alert.typeClass.includes('critical'),
+                'pi-info-circle': alert.typeClass.includes('warning') || alert.typeClass.includes('info')
+              }"></i>
+              {{ alert.type }}
+            </span>
+            <span class="db-alert-text">{{ alert.text }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- EMPTY STATE WHEN NO IMAGE IS UPLOADED -->
+      <div class="db-alerts-card empty-card" *ngIf="!selectedImage">
+        <div class="empty-state">
+          <i class="pi pi-chart-bar empty-icon"></i>
+          <h4>Awaiting Camera Feed</h4>
+          <p>Upload a factory floor image to render machine learning classifications and automated alerts.</p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
