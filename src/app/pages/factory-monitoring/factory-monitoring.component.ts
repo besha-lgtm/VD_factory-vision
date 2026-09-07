@@ -17,17 +17,15 @@ export class FactoryMonitoringComponent implements OnInit {
   @ViewChild('previewImg') previewImg!: ElementRef<HTMLImageElement>;
 
   selectedImage: string | ArrayBuffer | null = null;
-  model: tf.LayersModel | null = null;
+
+  // Separate, modular vision models for future scalability & granular insights
+  operatorModel: tf.LayersModel | null = null;
+  productModel: tf.LayersModel | null = null;
+  machineLightModel: tf.LayersModel | null = null;
+  unifiedFallbackModel: tf.LayersModel | null = null;
+
   isModelLoading = true;
   isAnalyzing = false;
-
-  // Ensure these match the exact order/names of classes in your Teachable Machine project
-  readonly labels = [
-    'machine_running_operator_absent',
-    'machine_running_operator_present',
-    'machine_stopped',
-    'signal_light_red'
-  ];
 
   detectedStatus = {
     machineRunning: false,
@@ -40,12 +38,28 @@ export class FactoryMonitoringComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      // Load model from assets folder
-      this.model = await tf.loadLayersModel('assets/model/model.json');
+      // Load all three modular models in parallel
+      const [opModel, prodModel, lightModel] = await Promise.all([
+        tf.loadLayersModel('assets/models/operator/model.json'),
+        tf.loadLayersModel('assets/models/product/model.json'),
+        tf.loadLayersModel('assets/models/machine_light/model.json')
+      ]);
+
+      this.operatorModel = opModel;
+      this.productModel = prodModel;
+      this.machineLightModel = lightModel;
       this.isModelLoading = false;
+      console.log('✓ All 3 modular vision models loaded successfully.');
     } catch (error) {
-      console.error('Failed to load TFJS model:', error);
-      this.isModelLoading = false;
+      console.warn('Failed loading modular models, attempting combined fallback model:', error);
+      try {
+        this.unifiedFallbackModel = await tf.loadLayersModel('assets/model/model.json');
+        this.isModelLoading = false;
+        console.log('✓ Fallback combined vision model loaded successfully.');
+      } catch (err2) {
+        console.error('Critical: Failed to load vision models:', err2);
+        this.isModelLoading = false;
+      }
     }
   }
 
@@ -64,95 +78,170 @@ export class FactoryMonitoringComponent implements OnInit {
   }
 
   async runModelInference(): Promise<void> {
-    if (!this.model || !this.previewImg) return;
+    const hasModularModels = this.operatorModel && this.productModel && this.machineLightModel;
+    if ((!hasModularModels && !this.unifiedFallbackModel) || !this.previewImg) return;
 
     this.isAnalyzing = true;
 
-    // 1. Convert image element to tensor and normalize dimensions (224x224)
-    const imgEl = this.previewImg.nativeElement;
-    const tensor = tf.browser.fromPixels(imgEl)
-      .resizeNearestNeighbor([224, 224])
-      .toFloat()
-      .div(tf.scalar(255))
-      .expandDims();
+    try {
+      // 1. Convert image element to tensor and normalize dimensions (224x224x3)
+      const imgEl = this.previewImg.nativeElement;
+      const tensor = tf.browser.fromPixels(imgEl)
+        .resizeNearestNeighbor([224, 224])
+        .toFloat()
+        .div(tf.scalar(255))
+        .expandDims() as tf.Tensor4D;
 
-    // 2. Run prediction through the neural network
-    const prediction = this.model.predict(tensor) as tf.Tensor;
-    const scores = await prediction.data();
+      let opScore = 0;
+      let prodScore = 0;
+      let lightScore = 0;
 
-    // Free memory allocations
-    tensor.dispose();
-    prediction.dispose();
+      // 2. Run inference through modular models or unified fallback
+      if (hasModularModels && this.operatorModel && this.productModel && this.machineLightModel) {
+        const opPred = this.operatorModel.predict(tensor) as tf.Tensor;
+        const prodPred = this.productModel.predict(tensor) as tf.Tensor;
+        const lightPred = this.machineLightModel.predict(tensor) as tf.Tensor;
 
-    // 3. Find index with highest probability score
-    const maxScoreIndex = scores.indexOf(Math.max(...Array.from(scores)));
-    const predictedClass = this.labels[maxScoreIndex];
+        const [opData, prodData, lightData] = await Promise.all([
+          opPred.data(),
+          prodPred.data(),
+          lightPred.data()
+        ]);
 
-    // 4. Map prediction output to component state
-    this.mapPredictionToStatus(predictedClass);
+        opScore = opData[0];
+        prodScore = prodData[0];
+        lightScore = lightData[0];
 
-    // 5. Evaluate alerts based on detected state
-    this.evaluateAlerts();
+        opPred.dispose();
+        prodPred.dispose();
+        lightPred.dispose();
+      } else if (this.unifiedFallbackModel) {
+        const pred = this.unifiedFallbackModel.predict(tensor) as tf.Tensor;
+        const predData = await pred.data();
+        opScore = predData[0];
+        prodScore = predData[1];
+        lightScore = predData[2];
+        pred.dispose();
+      }
 
-    this.isAnalyzing = false;
-  }
+      // Free memory allocations
+      tensor.dispose();
 
-  private mapPredictionToStatus(predictedClass: string): void {
-    switch (predictedClass) {
-      case 'machine_running_operator_absent':
-        this.detectedStatus = {
-          machineRunning: true,
-          productPresent: true,
-          lightGreen: true,
-          operatorPresent: false
-        };
-        break;
+      // Auxiliary signal light color verification for edge cases
+      const spectralGreenDetected = this.verifyGreenLightSpectrum(imgEl);
+      if (spectralGreenDetected && lightScore < 0.5) {
+        lightScore = 0.95;
+      }
 
-      case 'machine_running_operator_present':
-        this.detectedStatus = {
-          machineRunning: true,
-          productPresent: true,
-          lightGreen: true,
-          operatorPresent: true
-        };
-        break;
+      // 3. Map model outputs to component state
+      const isOperatorPresent = opScore >= 0.5;
+      const isProductPresent = prodScore >= 0.5;
+      const isLightGreen = lightScore >= 0.5;
+      // Machine running status is determined by Green Machine Light
+      const isMachineRunning = isLightGreen;
 
-      case 'signal_light_red':
-        this.detectedStatus = {
-          machineRunning: false,
-          productPresent: true,
-          lightGreen: false,
-          operatorPresent: true
-        };
-        break;
+      this.detectedStatus = {
+        machineRunning: isMachineRunning,
+        productPresent: isProductPresent,
+        lightGreen: isLightGreen,
+        operatorPresent: isOperatorPresent
+      };
 
-      default:
-        this.detectedStatus = {
-          machineRunning: false,
-          productPresent: false,
-          lightGreen: false,
-          operatorPresent: false
-        };
-        break;
+      console.log('Dynamic Vision Inference Results:', {
+        operator: `${(opScore * 100).toFixed(1)}% (${isOperatorPresent ? 'PRESENT' : 'ABSENT'})`,
+        product: `${(prodScore * 100).toFixed(1)}% (${isProductPresent ? 'DETECTED' : 'MISSING'})`,
+        machineLight: `${(lightScore * 100).toFixed(1)}% (${isLightGreen ? 'GREEN / RUNNING' : 'RED / STOPPED'})`
+      });
+
+      // 4. Evaluate multi-condition alert requirements
+      this.evaluateAlerts();
+    } catch (err) {
+      console.error('Inference error:', err);
+    } finally {
+      this.isAnalyzing = false;
     }
   }
 
+  /**
+   * Auxiliary pixel analysis to verify vivid green signal tower illumination
+   */
+  private verifyGreenLightSpectrum(imgEl: HTMLImageElement): boolean {
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return false;
+
+      canvas.width = 120;
+      canvas.height = 120;
+      ctx.drawImage(imgEl, 0, 0, 120, 120);
+      const imgData = ctx.getImageData(0, 0, 120, 120);
+      const data = imgData.data;
+
+      let greenPixels = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        // Green indicator lamp signature: luminous green with G significantly higher than R and B
+        if (g > 135 && g > r * 1.35 && g > b * 1.25) {
+          greenPixels++;
+        }
+      }
+      return greenPixels >= 8;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Evaluates all three conditions:
+   *   Condition 1: Operator Present
+   *   Condition 2: Product Present
+   *   Condition 3: Machine Running / Green Machine Light
+   * 
+   * If any one condition fails or is absent, clearly identifies the failed condition and raises an alert.
+   * If all three are satisfied, no failure alert is raised.
+   */
   private evaluateAlerts(): void {
     this.alerts = [];
 
-    if (this.detectedStatus.machineRunning && !this.detectedStatus.operatorPresent) {
-      this.alerts.push({
-        type: 'CRITICAL',
-        typeClass: 'badge-danger',
-        text: 'Unattended Machine Alert: Machine running and product present, but operator is ABSENT!'
-      });
+    const isOperator = this.detectedStatus.operatorPresent;
+    const isProduct = this.detectedStatus.productPresent;
+    const isGreenLight = this.detectedStatus.lightGreen;
+    const isMachineRunning = this.detectedStatus.machineRunning;
+
+    // Condition 1: Operator Presence Check
+    if (!isOperator) {
+      if (isMachineRunning && isProduct) {
+        this.alerts.push({
+          type: 'CRITICAL',
+          typeClass: 'badge-danger',
+          text: 'Unattended Machine Alert: Machine is running and product is present, but operator is ABSENT!'
+        });
+      } else {
+        this.alerts.push({
+          type: 'CRITICAL',
+          typeClass: 'badge-danger',
+          text: 'Operator Absence Alert: No operator detected at the production station.'
+        });
+      }
     }
 
-    if (!this.detectedStatus.lightGreen) {
+    // Condition 2: Product Presence Check
+    if (!isProduct) {
       this.alerts.push({
         type: 'WARNING',
         typeClass: 'badge-warning',
-        text: 'Signal tower light is RED or OFF.'
+        text: 'Material Missing Alert: No product detected on the conveyor line!'
+      });
+    }
+
+    // Condition 3: Machine Running / Signal Light Check
+    if (!isGreenLight || !isMachineRunning) {
+      this.alerts.push({
+        type: 'CRITICAL',
+        typeClass: 'badge-danger',
+        text: 'Machine Inactive Alert: Machine is STOPPED (Signal tower green light is OFF or RED)!'
       });
     }
   }

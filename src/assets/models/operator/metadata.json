@@ -1,0 +1,7 @@
+{
+  "modelName": "yolo-operator-detector",
+  "target": "Operator Presence",
+  "threshold": 0.5,
+  "version": "1.0.0",
+  "description": "Vision model for detecting human operators at the production station"
+}

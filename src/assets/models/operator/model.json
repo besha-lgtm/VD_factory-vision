@@ -2,10 +2,10 @@
   "modelTopology": {
     "class_name": "Model",
     "config": {
-      "name": "model7",
+      "name": "model2",
       "layers": [
         {
-          "name": "input8",
+          "name": "input2",
           "class_name": "InputLayer",
           "config": {
             "batch_input_shape": [
@@ -16,7 +16,7 @@
             ],
             "dtype": "float32",
             "sparse": false,
-            "name": "input8"
+            "name": "input2"
           },
           "inbound_nodes": []
         },
@@ -6119,7 +6119,7 @@
           "inbound_nodes": [
             [
               [
-                "input8",
+                "input2",
                 0,
                 0,
                 {}
@@ -6128,13 +6128,13 @@
           ]
         },
         {
-          "name": "combined_head",
+          "name": "model1",
           "class_name": "Model",
           "config": {
-            "name": "combined_head",
+            "name": "model1",
             "layers": [
               {
-                "name": "input7",
+                "name": "input1",
                 "class_name": "InputLayer",
                 "config": {
                   "batch_input_shape": [
@@ -6143,12 +6143,12 @@
                   ],
                   "dtype": "float32",
                   "sparse": false,
-                  "name": "input7"
+                  "name": "input1"
                 },
                 "inbound_nodes": []
               },
               {
-                "name": "comb_dense_1",
+                "name": "dense_Dense1",
                 "class_name": "Dense",
                 "config": {
                   "units": 64,
@@ -6172,13 +6172,13 @@
                   "activity_regularizer": null,
                   "kernel_constraint": null,
                   "bias_constraint": null,
-                  "name": "comb_dense_1",
+                  "name": "dense_Dense1",
                   "trainable": true
                 },
                 "inbound_nodes": [
                   [
                     [
-                      "input7",
+                      "input1",
                       0,
                       0,
                       {}
@@ -6187,19 +6187,19 @@
                 ]
               },
               {
-                "name": "comb_dropout",
+                "name": "dropout_Dropout1",
                 "class_name": "Dropout",
                 "config": {
                   "rate": 0.2,
                   "noise_shape": null,
                   "seed": null,
-                  "name": "comb_dropout",
+                  "name": "dropout_Dropout1",
                   "trainable": true
                 },
                 "inbound_nodes": [
                   [
                     [
-                      "comb_dense_1",
+                      "dense_Dense1",
                       0,
                       0,
                       {}
@@ -6208,10 +6208,10 @@
                 ]
               },
               {
-                "name": "comb_dense_out",
+                "name": "dense_Dense2",
                 "class_name": "Dense",
                 "config": {
-                  "units": 3,
+                  "units": 1,
                   "activation": "sigmoid",
                   "use_bias": true,
                   "kernel_initializer": {
@@ -6232,13 +6232,13 @@
                   "activity_regularizer": null,
                   "kernel_constraint": null,
                   "bias_constraint": null,
-                  "name": "comb_dense_out",
+                  "name": "dense_Dense2",
                   "trainable": true
                 },
                 "inbound_nodes": [
                   [
                     [
-                      "comb_dropout",
+                      "dropout_Dropout1",
                       0,
                       0,
                       {}
@@ -6249,14 +6249,14 @@
             ],
             "input_layers": [
               [
-                "input7",
+                "input1",
                 0,
                 0
               ]
             ],
             "output_layers": [
               [
-                "comb_dense_out",
+                "dense_Dense2",
                 0,
                 0
               ]
@@ -6276,14 +6276,14 @@
       ],
       "input_layers": [
         [
-          "input8",
+          "input2",
           0,
           0
         ]
       ],
       "output_layers": [
         [
-          "combined_head",
+          "model1",
           1,
           0
         ]
@@ -7547,7 +7547,7 @@
           "dtype": "float32"
         },
         {
-          "name": "comb_dense_1/kernel",
+          "name": "dense_Dense1/kernel",
           "shape": [
             1280,
             64
@@ -7555,24 +7555,24 @@
           "dtype": "float32"
         },
         {
-          "name": "comb_dense_1/bias",
+          "name": "dense_Dense1/bias",
           "shape": [
             64
           ],
           "dtype": "float32"
         },
         {
-          "name": "comb_dense_out/kernel",
+          "name": "dense_Dense2/kernel",
           "shape": [
             64,
-            3
+            1
           ],
           "dtype": "float32"
         },
         {
-          "name": "comb_dense_out/bias",
+          "name": "dense_Dense2/bias",
           "shape": [
-            3
+            1
           ],
           "dtype": "float32"
         },
