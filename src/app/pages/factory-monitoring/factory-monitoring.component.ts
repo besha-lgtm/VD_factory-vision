@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import * as tf from '@tensorflow/tfjs';
 
 interface AlertItem {
@@ -13,10 +13,27 @@ interface AlertItem {
   templateUrl: './factory-monitoring.component.html',
   styleUrls: ['./factory-monitoring.component.css']
 })
-export class FactoryMonitoringComponent implements OnInit {
-  @ViewChild('previewImg') previewImg!: ElementRef<HTMLImageElement>;
+export class FactoryMonitoringComponent implements OnInit, OnDestroy {
+  @ViewChild('previewImg') previewImg?: ElementRef<HTMLImageElement>;
+  @ViewChild('videoPlayer') videoPlayer?: ElementRef<HTMLVideoElement>;
 
   selectedImage: string | ArrayBuffer | null = null;
+  inputMode: 'upload' | 'camera' = 'upload';
+
+  // Live Camera stream & recurring 5s timer
+  cameraStream: MediaStream | null = null;
+  cameraActive = false;
+  cameraError = '';
+  countdownSeconds = 5;
+  private captureTimer: any = null;
+  private countdownTimer: any = null;
+
+  // Domain validation (machine, product, and signal light)
+  isImageAppropriate: boolean | null = null;
+  hasMachine = false;
+  hasProduct = false;
+  hasLight = false;
+  inappropriateMessage = '';
 
   // Separate, modular vision models for future scalability & granular insights
   operatorModel: tf.LayersModel | null = null;
@@ -63,6 +80,127 @@ export class FactoryMonitoringComponent implements OnInit {
     }
   }
 
+  ngOnDestroy(): void {
+    this.stopCamera();
+  }
+
+  switchMode(mode: 'upload' | 'camera'): void {
+    if (this.inputMode === mode) return;
+
+    if (this.inputMode === 'camera') {
+      this.stopCamera();
+    }
+
+    this.inputMode = mode;
+    this.selectedImage = null;
+    this.alerts = [];
+    this.isImageAppropriate = null;
+    this.hasMachine = false;
+    this.hasProduct = false;
+    this.hasLight = false;
+    this.inappropriateMessage = '';
+
+    if (mode === 'camera') {
+      this.startCamera();
+    }
+  }
+
+  async startCamera(): Promise<void> {
+    this.cameraError = '';
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera is not supported in this browser environment.');
+      }
+
+      this.cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+        audio: false
+      });
+      this.cameraActive = true;
+
+      // Allow DOM to render the video element, then attach stream
+      setTimeout(() => {
+        if (this.videoPlayer && this.videoPlayer.nativeElement) {
+          const video = this.videoPlayer.nativeElement;
+          video.srcObject = this.cameraStream;
+          video.onloadedmetadata = () => {
+            video.play().catch(e => console.warn('Video play error:', e));
+            // Immediate first capture, then start 5s auto-capture loop
+            this.captureFrame();
+            this.startAutoCapture();
+          };
+        }
+      }, 150);
+    } catch (err: any) {
+      console.error('Camera error:', err);
+      this.cameraError = err.message || 'Could not access camera. Please allow camera permissions.';
+      this.cameraActive = false;
+    }
+  }
+
+  stopCamera(): void {
+    if (this.captureTimer) {
+      clearInterval(this.captureTimer);
+      this.captureTimer = null;
+    }
+    if (this.countdownTimer) {
+      clearInterval(this.countdownTimer);
+      this.countdownTimer = null;
+    }
+    if (this.cameraStream) {
+      this.cameraStream.getTracks().forEach(track => {
+        try {
+          track.stop();
+        } catch (e) {
+          console.warn('Track stop error:', e);
+        }
+      });
+      this.cameraStream = null;
+    }
+    if (this.videoPlayer && this.videoPlayer.nativeElement) {
+      this.videoPlayer.nativeElement.srcObject = null;
+    }
+    this.cameraActive = false;
+    this.countdownSeconds = 5;
+  }
+
+  startAutoCapture(): void {
+    if (this.captureTimer) clearInterval(this.captureTimer);
+    if (this.countdownTimer) clearInterval(this.countdownTimer);
+
+    this.countdownSeconds = 5;
+    this.countdownTimer = setInterval(() => {
+      if (this.countdownSeconds > 1) {
+        this.countdownSeconds--;
+      } else {
+        this.countdownSeconds = 5;
+      }
+    }, 1000);
+
+    this.captureTimer = setInterval(() => {
+      this.captureFrame();
+      this.countdownSeconds = 5;
+    }, 5000);
+  }
+
+  captureFrame(): void {
+    if (!this.cameraActive || !this.videoPlayer || !this.videoPlayer.nativeElement) return;
+    const video = this.videoPlayer.nativeElement;
+    if (video.videoWidth === 0 || video.videoHeight === 0) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    this.selectedImage = canvas.toDataURL('image/jpeg');
+
+    // Run model inference directly on canvas
+    this.runModelInference(canvas);
+  }
+
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
@@ -77,15 +215,19 @@ export class FactoryMonitoringComponent implements OnInit {
     }
   }
 
-  async runModelInference(): Promise<void> {
+  async runModelInference(sourceCanvas?: HTMLCanvasElement): Promise<void> {
     const hasModularModels = this.operatorModel && this.productModel && this.machineLightModel;
-    if ((!hasModularModels && !this.unifiedFallbackModel) || !this.previewImg) return;
+    if (!hasModularModels && !this.unifiedFallbackModel) return;
+
+    const imgEl: HTMLImageElement | HTMLCanvasElement | null =
+      sourceCanvas || (this.previewImg ? this.previewImg.nativeElement : null);
+
+    if (!imgEl) return;
 
     this.isAnalyzing = true;
 
     try {
-      // 1. Convert image element to tensor and normalize dimensions (224x224x3)
-      const imgEl = this.previewImg.nativeElement;
+      // 1. Convert image element/canvas to tensor and normalize dimensions (224x224x3)
       const tensor = tf.browser.fromPixels(imgEl)
         .resizeNearestNeighbor([224, 224])
         .toFloat()
@@ -133,11 +275,37 @@ export class FactoryMonitoringComponent implements OnInit {
         lightScore = 0.95;
       }
 
-      // 3. Map model outputs to component state
+      // 3. Robust domain validation using both visual metrics and neural model outputs
+      const validation = this.validateImageComponents(imgEl, {
+        opScore,
+        prodScore,
+        lightScore,
+        spectralGreenDetected
+      });
+
+      this.hasMachine = validation.hasMachine;
+      this.hasProduct = validation.hasProduct;
+      this.hasLight = validation.hasLight;
+      this.isImageAppropriate = validation.isAppropriate;
+      this.inappropriateMessage = validation.message;
+
+      // If image is inappropriate (missing machine, product, or light), do NOT generate analysis
+      if (!this.isImageAppropriate) {
+        this.alerts = [];
+        this.detectedStatus = {
+          machineRunning: false,
+          productPresent: false,
+          lightGreen: false,
+          operatorPresent: false
+        };
+        console.warn('Image rejected:', validation.message);
+        return;
+      }
+
+      // 4. Map model outputs to component state
       const isOperatorPresent = opScore >= 0.5;
       const isProductPresent = prodScore >= 0.5;
       const isLightGreen = lightScore >= 0.5;
-      // Machine running status is determined by Green Machine Light
       const isMachineRunning = isLightGreen;
 
       this.detectedStatus = {
@@ -153,7 +321,7 @@ export class FactoryMonitoringComponent implements OnInit {
         machineLight: `${(lightScore * 100).toFixed(1)}% (${isLightGreen ? 'GREEN / RUNNING' : 'RED / STOPPED'})`
       });
 
-      // 4. Evaluate multi-condition alert requirements
+      // 5. Evaluate multi-condition alert requirements
       this.evaluateAlerts();
     } catch (err) {
       console.error('Inference error:', err);
@@ -165,7 +333,7 @@ export class FactoryMonitoringComponent implements OnInit {
   /**
    * Auxiliary pixel analysis to verify vivid green signal tower illumination
    */
-  private verifyGreenLightSpectrum(imgEl: HTMLImageElement): boolean {
+  private verifyGreenLightSpectrum(imgEl: HTMLImageElement | HTMLCanvasElement): boolean {
     try {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -243,6 +411,173 @@ export class FactoryMonitoringComponent implements OnInit {
         typeClass: 'badge-danger',
         text: 'Machine Inactive Alert: Machine is STOPPED (Signal tower green light is OFF or RED)!'
       });
+    }
+  }
+
+  /**
+   * Validates that the image contains the components our model was trained on:
+   * 1. Machine (conveyor structure & machinery framing, not a casual selfie/room)
+   * 2. Product (cardboard package or conveyor cargo)
+   * 3. Light (signal tower green/red/amber lamp)
+   */
+  private validateImageComponents(
+    source: HTMLImageElement | HTMLCanvasElement,
+    scores: { opScore: number; prodScore: number; lightScore: number; spectralGreenDetected: boolean }
+  ): {
+    isAppropriate: boolean;
+    hasMachine: boolean;
+    hasProduct: boolean;
+    hasLight: boolean;
+    message: string;
+  } {
+    try {
+      const sampleWidth = 160;
+      const sampleHeight = 160;
+      const canvas = document.createElement('canvas');
+      canvas.width = sampleWidth;
+      canvas.height = sampleHeight;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) {
+        return { isAppropriate: true, hasMachine: true, hasProduct: true, hasLight: true, message: '' };
+      }
+
+      ctx.drawImage(source, 0, 0, sampleWidth, sampleHeight);
+      const imgData = ctx.getImageData(0, 0, sampleWidth, sampleHeight);
+      const data = imgData.data;
+
+      // Check for extreme dark or obstructed lens
+      let totalLuma = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        totalLuma += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+      }
+      const meanLuma = totalLuma / (sampleWidth * sampleHeight);
+      if (meanLuma < 15) {
+        return {
+          isAppropriate: false,
+          hasMachine: false,
+          hasProduct: false,
+          hasLight: false,
+          message: 'Inappropriate image: Frame is too dark or camera is covered. Machine and signal light cannot be detected.'
+        };
+      }
+
+      // Check for close-up face/selfie in central 60% of frame
+      let centralPixels = 0;
+      let skinPixels = 0;
+      const cxMin = Math.floor(sampleWidth * 0.2);
+      const cxMax = Math.floor(sampleWidth * 0.8);
+      const cyMin = Math.floor(sampleHeight * 0.15);
+      const cyMax = Math.floor(sampleHeight * 0.85);
+
+      for (let y = cyMin; y < cyMax; y++) {
+        for (let x = cxMin; x < cxMax; x++) {
+          const idx = (y * sampleWidth + x) * 4;
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+          centralPixels++;
+          const maxVal = Math.max(r, g, b);
+          const minVal = Math.min(r, g, b);
+          if (r > 95 && g > 40 && b > 20 && (maxVal - minVal > 15) && Math.abs(r - g) > 15 && r > g && r > b) {
+            skinPixels++;
+          }
+        }
+      }
+      const isSelfieFace = (skinPixels / (centralPixels || 1)) > 0.18;
+
+      // 1. Signal Light: Green, Red, or Amber beacon, spectral detection, or model confidence
+      let signalLightPixels = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const isGreen = (g > 125 && g > r * 1.25 && g > b * 1.15);
+        const isRed = (r > 130 && r > g * 1.3 && r > b * 1.3);
+        const isAmber = (r > 150 && g > 105 && b < 95 && r > g * 1.1);
+        if (isGreen || isRed || isAmber) {
+          signalLightPixels++;
+        }
+      }
+      const hasLight = !isSelfieFace && (scores.spectralGreenDetected || signalLightPixels >= 3 || scores.lightScore >= 0.35);
+
+      // 2. Machine: Conveyor rollers, frame, industrial metal, and model confidence
+      let edgeCount = 0;
+      const edgeThreshold = 32;
+      for (let y = 1; y < sampleHeight - 1; y += 2) {
+        for (let x = 1; x < sampleWidth - 1; x += 2) {
+          const idx = (y * sampleWidth + x) * 4;
+          const idxRight = (y * sampleWidth + (x + 1)) * 4;
+          const idxDown = ((y + 1) * sampleWidth + x) * 4;
+
+          const luma = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+          const lumaRight = 0.299 * data[idxRight] + 0.587 * data[idxRight + 1] + 0.114 * data[idxRight + 2];
+          const lumaDown = 0.299 * data[idxDown] + 0.587 * data[idxDown + 1] + 0.114 * data[idxDown + 2];
+
+          const grad = Math.abs(luma - lumaRight) + Math.abs(luma - lumaDown);
+          if (grad > edgeThreshold) {
+            edgeCount++;
+          }
+        }
+      }
+      const sampledPoints = ((sampleHeight - 2) / 2) * ((sampleWidth - 2) / 2);
+      const edgeRatio = edgeCount / sampledPoints;
+
+      let metalGreyPoints = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        if (Math.abs(r - g) < 22 && Math.abs(g - b) < 22 && Math.abs(r - b) < 22 && r > 35 && r < 215) {
+          metalGreyPoints++;
+        }
+      }
+      const metalGreyRatio = metalGreyPoints / (sampleWidth * sampleHeight);
+
+      const hasMachine = !isSelfieFace && (edgeRatio >= 0.040 || metalGreyRatio >= 0.15 || (scores.prodScore >= 0.35 && scores.lightScore >= 0.35));
+
+      // 3. Product: Cardboard boxes or conveyor package freight or model confidence
+      let productPoints = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        if (r > 80 && r < 225 && g > 60 && g < 190 && b > 30 && b < 145 && r > g && g > b) {
+          productPoints++;
+        }
+      }
+      const hasProduct = !isSelfieFace && (productPoints >= 10 || scores.prodScore >= 0.35 || (hasMachine && edgeRatio >= 0.055));
+
+      // Overall: Require machine, product, and light
+      let isAppropriate = hasMachine && hasProduct && hasLight;
+
+      // Temporal smoothing for live camera: avoid 1-frame glitches
+      if (this.inputMode === 'camera' && this.isImageAppropriate === true) {
+        if (hasMachine && (hasProduct || hasLight)) {
+          isAppropriate = true;
+        }
+      }
+
+      let message = '';
+      if (!isAppropriate) {
+        const missing: string[] = [];
+        if (!hasMachine) missing.push('Machine');
+        if (!hasProduct) missing.push('Product');
+        if (!hasLight) missing.push('Signal Light');
+        message = isSelfieFace
+          ? 'Inappropriate image: Face/selfie detected. Please point camera towards the machine, product, and signal light.'
+          : `Inappropriate image. Missing required elements: ${missing.join(', ')}. Images must contain machine, product, and signal light.`;
+      }
+
+      return {
+        isAppropriate,
+        hasMachine,
+        hasProduct,
+        hasLight,
+        message
+      };
+    } catch (e) {
+      console.warn('Error during image validation:', e);
+      return { isAppropriate: true, hasMachine: true, hasProduct: true, hasLight: true, message: '' };
     }
   }
 }

@@ -27,15 +27,33 @@
         <div class="db-jobs-header">
           <div>
             <h3 class="db-jobs-title">Camera Feed Analysis</h3>
-            <p class="db-jobs-subtitle">Upload or stream floor camera frame for real-time analysis</p>
+            <p class="db-jobs-subtitle">Upload snapshot or stream live camera frame for real-time analysis</p>
           </div>
-          <div class="db-header-badge" [ngClass]="{'is-active': selectedImage}">
-            <i class="pi pi-video"></i>
-            <span>{{ selectedImage ? 'Frame Loaded' : 'No Input' }}</span>
+          <div class="db-header-badge" [ngClass]="{'is-active': selectedImage || cameraActive}">
+            <i class="pi" [ngClass]="inputMode === 'camera' ? 'pi-video' : 'pi-image'"></i>
+            <span>{{ inputMode === 'camera' ? (cameraActive ? 'Camera Live' : 'Camera Ready') : (selectedImage ? 'Frame Loaded' : 'No Input') }}</span>
           </div>
         </div>
+
+        <!-- Mode Switcher: Upload vs Live Camera -->
+        <div class="feed-mode-switcher">
+          <button type="button" 
+                  class="mode-btn" 
+                  [class.active]="inputMode === 'upload'" 
+                  (click)="switchMode('upload')">
+            <i class="pi pi-upload"></i> Upload Image
+          </button>
+          <button type="button" 
+                  class="mode-btn" 
+                  [class.active]="inputMode === 'camera'" 
+                  (click)="switchMode('camera')">
+            <i class="pi pi-video"></i> Live Camera (5s Auto)
+            <span class="live-dot" *ngIf="cameraActive"></span>
+          </button>
+        </div>
         
-        <div class="upload-container">
+        <!-- Upload Mode View -->
+        <div class="upload-container" *ngIf="inputMode === 'upload'">
           <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*" hidden />
           
           <!-- Dropzone State: Before Upload -->
@@ -77,20 +95,120 @@
             </div>
           </div>
         </div>
+
+        <!-- Live Camera Mode View -->
+        <div class="camera-mode-container" *ngIf="inputMode === 'camera'">
+          <!-- Before Camera Start -->
+          <div class="camera-prompt" *ngIf="!cameraActive" (click)="startCamera()">
+            <div class="upload-icon-wrapper">
+              <i class="pi pi-video"></i>
+            </div>
+            <div class="upload-text-group">
+              <span class="upload-primary-text">Connect to Laptop Camera</span>
+              <span class="upload-secondary-text">Streams live feed and auto-captures frame every 5 seconds</span>
+            </div>
+            <button class="upload-btn" (click)="startCamera(); $event.stopPropagation()">
+              <i class="pi pi-play"></i> Start Camera Stream
+            </button>
+            <p class="text-danger mt-2" *ngIf="cameraError">
+              <i class="pi pi-exclamation-triangle"></i> {{ cameraError }}
+            </p>
+          </div>
+
+          <!-- Live Camera Stream Active -->
+          <div class="camera-feed-wrapper" *ngIf="cameraActive">
+            <div class="image-frame">
+              <video #videoPlayer autoplay playsinline muted class="camera-video"></video>
+              <div class="camera-live-pill">
+                <span class="live-dot"></span> LIVE
+              </div>
+              <div class="countdown-pill">
+                <i class="pi pi-clock"></i> Next capture in {{ countdownSeconds }}s
+              </div>
+              <div class="scanner-line" *ngIf="isAnalyzing"></div>
+            </div>
+
+            <div class="preview-actions">
+              <div class="analysis-status" *ngIf="isAnalyzing">
+                <span class="spinner"></span>
+                <span>Analyzing frame...</span>
+              </div>
+              <div class="analysis-status status-complete" *ngIf="!isAnalyzing">
+                <i class="pi pi-check-circle"></i>
+                <span>Live Feed Active (Capturing every 5s)</span>
+              </div>
+              <div class="camera-btn-group">
+                <button type="button" class="reupload-btn" (click)="captureFrame(); startAutoCapture()" [disabled]="isAnalyzing">
+                  <i class="pi pi-camera"></i> Capture Now
+                </button>
+                <button type="button" class="reupload-btn btn-danger" (click)="stopCamera()">
+                  <i class="pi pi-stop-circle"></i> Stop Camera
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
     <!-- ML MODEL RESULTS & ALERTS -->
     <div class="db-alerts-section">
 
-      <!-- DETECTED STATUS METRICS -->
-      <div class="db-alerts-card" *ngIf="selectedImage && !isAnalyzing">
+      <!-- INAPPROPRIATE IMAGE REJECTION CARD -->
+      <div class="db-alerts-card card-inappropriate" *ngIf="selectedImage && !isAnalyzing && isImageAppropriate === false">
+        <div class="db-alerts-header inappropriate-header">
+          <div>
+            <h3 class="db-alerts-title text-danger">
+              <i class="pi pi-ban"></i> Inappropriate Image
+            </h3>
+            <p class="db-alerts-subtitle">Image outside trained model dataset</p>
+          </div>
+          <span class="db-badge badge-danger">
+            <span class="badge-dot"></span> REJECTED
+          </span>
+        </div>
+
+        <div class="inappropriate-content">
+          <div class="inappropriate-msg-box">
+            <i class="pi pi-exclamation-triangle"></i>
+            <span>{{ inappropriateMessage }}</span>
+          </div>
+
+          <div class="component-requirement-list">
+            <div class="req-title">Required Trained Elements:</div>
+            <div class="req-item" [class.valid]="hasMachine" [class.invalid]="!hasMachine">
+              <i class="pi" [ngClass]="hasMachine ? 'pi-check-circle text-success' : 'pi-times-circle text-danger'"></i>
+              <span class="req-label">1. Factory Machine / Workstation</span>
+              <span class="db-badge" [ngClass]="hasMachine ? 'badge-success' : 'badge-danger'">{{ hasMachine ? 'DETECTED' : 'NOT FOUND' }}</span>
+            </div>
+            <div class="req-item" [class.valid]="hasProduct" [class.invalid]="!hasProduct">
+              <i class="pi" [ngClass]="hasProduct ? 'pi-check-circle text-success' : 'pi-times-circle text-danger'"></i>
+              <span class="req-label">2. Product / Conveyor Cargo</span>
+              <span class="db-badge" [ngClass]="hasProduct ? 'badge-success' : 'badge-danger'">{{ hasProduct ? 'DETECTED' : 'NOT FOUND' }}</span>
+            </div>
+            <div class="req-item" [class.valid]="hasLight" [class.invalid]="!hasLight">
+              <i class="pi" [ngClass]="hasLight ? 'pi-check-circle text-success' : 'pi-times-circle text-danger'"></i>
+              <span class="req-label">3. Signal Light (Tower Lamp)</span>
+              <span class="db-badge" [ngClass]="hasLight ? 'badge-success' : 'badge-danger'">{{ hasLight ? 'DETECTED' : 'NOT FOUND' }}</span>
+            </div>
+          </div>
+
+          <p class="inappropriate-hint">
+            <i class="pi pi-info-circle"></i>
+            Analysis cannot be generated for casual photos, selfies, or rooms. The model accepts images containing <strong>machine</strong>, <strong>product</strong>, and <strong>signal light</strong>.
+          </p>
+        </div>
+      </div>
+
+      <!-- DETECTED STATUS METRICS (TRAINED MODEL DOMAIN) -->
+      <div class="db-alerts-card" *ngIf="selectedImage && !isAnalyzing && isImageAppropriate === true">
         <div class="db-alerts-header">
           <div>
             <h3 class="db-alerts-title">ML Dataset Output</h3>
             <p class="db-alerts-subtitle">Real-time classification outcomes</p>
           </div>
-          <span class="confidence-tag"><i class="pi pi-shield"></i> High Confidence</span>
+          <span class="confidence-tag"><i class="pi pi-shield"></i> Valid Dataset Model</span>
         </div>
 
         <div class="db-table-wrapper">
@@ -152,7 +270,7 @@
       </div>
 
       <!-- ALERTS LIST GENERATED FROM ML INFERENCE -->
-      <div class="db-alerts-card" *ngIf="alerts.length > 0">
+      <div class="db-alerts-card" *ngIf="selectedImage && !isAnalyzing && isImageAppropriate === true && alerts.length > 0">
         <div class="db-alerts-header">
           <div>
             <h3 class="db-alerts-title">System Alerts</h3>
@@ -180,7 +298,7 @@
         <div class="empty-state">
           <i class="pi pi-chart-bar empty-icon"></i>
           <h4>Awaiting Camera Feed</h4>
-          <p>Upload a factory floor image to render machine learning classifications and automated alerts.</p>
+          <p>Upload a factory floor image or start live camera feed to render machine learning classifications.</p>
         </div>
       </div>
 
