@@ -25,13 +25,16 @@
     <div class="db-jobs-section">
       <div class="db-jobs-card">
         <div class="db-jobs-header">
-          <div>
-            <h3 class="db-jobs-title">Camera Feed Analysis</h3>
-            <p class="db-jobs-subtitle">Upload snapshot or stream live camera frame for real-time analysis</p>
+          <div class="title-with-number">
+            <span class="title-number">01</span>
+            <div>
+              <h3 class="db-jobs-title">Camera Feed Analysis</h3>
+              <p class="db-jobs-subtitle">Upload snapshot or stream live camera frame for real-time analysis</p>
+            </div>
           </div>
-          <div class="db-header-badge" [ngClass]="{'is-active': selectedImage || cameraActive}">
+          <div class="db-header-badge" [ngClass]="{'is-active': imageAnalyses.length > 0 || cameraActive}">
             <i class="pi" [ngClass]="inputMode === 'camera' ? 'pi-video' : 'pi-image'"></i>
-            <span>{{ inputMode === 'camera' ? (cameraActive ? 'Camera Live' : 'Camera Ready') : (selectedImage ? 'Frame Loaded' : 'No Input') }}</span>
+            <span>{{ inputMode === 'camera' ? (cameraActive ? 'Camera Live' : 'Camera Ready') : (imageAnalyses.length > 0 ? (imageAnalyses.length + ' Frames Loaded') : 'No Input') }}</span>
           </div>
         </div>
 
@@ -54,45 +57,36 @@
         
         <!-- Upload Mode View -->
         <div class="upload-container" *ngIf="inputMode === 'upload'">
-          <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*" hidden />
+          <!-- MULTIPLE IMAGE SUPPORT -->
+          <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*" multiple hidden />
           
-          <!-- Dropzone State: Before Upload -->
-          <div class="upload-dropzone" *ngIf="!selectedImage" (click)="fileInput.click()">
+          <div class="preview-actions" *ngIf="imageAnalyses.length > 0" style="margin-bottom: 1rem;">
+            <div class="analysis-status status-complete">
+              <i class="pi pi-images"></i>
+              <span>{{ imageAnalyses.length }} Images Loaded</span>
+            </div>
+            <div class="camera-btn-group">
+              <button class="reupload-btn" (click)="fileInput.click()" [disabled]="isModelLoading">
+                <i class="pi pi-plus"></i> Add More
+              </button>
+              <button class="reupload-btn btn-danger" (click)="clearImages()" [disabled]="isModelLoading">
+                <i class="pi pi-trash"></i> Clear All
+              </button>
+            </div>
+          </div>
+
+          <!-- Dropzone State: Before Upload or as a permanent button when images exist -->
+          <div class="upload-dropzone" *ngIf="imageAnalyses.length === 0" (click)="fileInput.click()">
             <div class="upload-icon-wrapper">
               <i class="pi pi-cloud-upload"></i>
             </div>
             <div class="upload-text-group">
-              <span class="upload-primary-text">Click to upload factory floor snap</span>
-              <span class="upload-secondary-text">Supports JPG, PNG, WEBP (Max 10MB)</span>
+              <span class="upload-primary-text">Click to upload factory floor snaps</span>
+              <span class="upload-secondary-text">Supports JPG, PNG, WEBP (Max 10MB, Multiple Allowed)</span>
             </div>
             <button class="upload-btn" [disabled]="isModelLoading">
-              <i class="pi pi-upload"></i> Select Image
+              <i class="pi pi-upload"></i> Select Images
             </button>
-          </div>
-
-          <!-- Preview & Active Analysis State -->
-          <div class="image-preview-wrapper" *ngIf="selectedImage">
-            <div class="image-frame">
-              <img #previewImg [src]="selectedImage" alt="Factory Floor Snap" (load)="runModelInference()" class="preview-img" />
-              
-              <!-- Scanning Overlay Animation -->
-              <div class="scanner-line" *ngIf="isAnalyzing"></div>
-            </div>
-
-            <!-- Analysis Status Footer -->
-            <div class="preview-actions">
-              <div class="analysis-status" *ngIf="isAnalyzing">
-                <span class="spinner"></span>
-                <span>Running neural network analysis...</span>
-              </div>
-              <div class="analysis-status status-complete" *ngIf="!isAnalyzing">
-                <i class="pi pi-check-circle"></i>
-                <span>Inference Complete</span>
-              </div>
-              <button class="reupload-btn" (click)="fileInput.click()" [disabled]="isAnalyzing">
-                <i class="pi pi-refresh"></i> Replace Image
-              </button>
-            </div>
           </div>
         </div>
 
@@ -117,28 +111,23 @@
 
           <!-- Live Camera Stream Active -->
           <div class="camera-feed-wrapper" *ngIf="cameraActive">
-            <div class="image-frame">
-              <video #videoPlayer autoplay playsinline muted class="camera-video"></video>
+            <div class="image-frame" style="max-height: 720px;">
+              <video #videoPlayer autoplay playsinline muted class="camera-video" style="width: 100%; height: auto; display: block;"></video>
               <div class="camera-live-pill">
                 <span class="live-dot"></span> LIVE
               </div>
               <div class="countdown-pill">
                 <i class="pi pi-clock"></i> Next capture in {{ countdownSeconds }}s
               </div>
-              <div class="scanner-line" *ngIf="isAnalyzing"></div>
             </div>
 
             <div class="preview-actions">
-              <div class="analysis-status" *ngIf="isAnalyzing">
-                <span class="spinner"></span>
-                <span>Analyzing frame...</span>
-              </div>
-              <div class="analysis-status status-complete" *ngIf="!isAnalyzing">
+              <div class="analysis-status status-complete">
                 <i class="pi pi-check-circle"></i>
                 <span>Live Feed Active (Capturing every 5s)</span>
               </div>
               <div class="camera-btn-group">
-                <button type="button" class="reupload-btn" (click)="captureFrame(); startAutoCapture()" [disabled]="isAnalyzing">
+                <button type="button" class="reupload-btn" (click)="captureFrame(); startAutoCapture()">
                   <i class="pi pi-camera"></i> Capture Now
                 </button>
                 <button type="button" class="reupload-btn btn-danger" (click)="stopCamera()">
@@ -153,155 +142,89 @@
     </div>
 
     <!-- ML MODEL RESULTS & ALERTS -->
-    <div class="db-alerts-section">
-
-      <!-- INAPPROPRIATE IMAGE REJECTION CARD -->
-      <div class="db-alerts-card card-inappropriate" *ngIf="selectedImage && !isAnalyzing && isImageAppropriate === false">
-        <div class="db-alerts-header inappropriate-header">
-          <div>
-            <h3 class="db-alerts-title text-danger">
-              <i class="pi pi-ban"></i> Inappropriate Image
-            </h3>
-            <p class="db-alerts-subtitle">Image outside trained model dataset</p>
-          </div>
-          <span class="db-badge badge-danger">
-            <span class="badge-dot"></span> REJECTED
-          </span>
-        </div>
-
-        <div class="inappropriate-content">
-          <div class="inappropriate-msg-box">
-            <i class="pi pi-exclamation-triangle"></i>
-            <span>{{ inappropriateMessage }}</span>
-          </div>
-
-          <div class="component-requirement-list">
-            <div class="req-title">Required Trained Elements:</div>
-            <div class="req-item" [class.valid]="hasMachine" [class.invalid]="!hasMachine">
-              <i class="pi" [ngClass]="hasMachine ? 'pi-check-circle text-success' : 'pi-times-circle text-danger'"></i>
-              <span class="req-label">1. Factory Machine / Workstation</span>
-              <span class="db-badge" [ngClass]="hasMachine ? 'badge-success' : 'badge-danger'">{{ hasMachine ? 'DETECTED' : 'NOT FOUND' }}</span>
-            </div>
-            <div class="req-item" [class.valid]="hasProduct" [class.invalid]="!hasProduct">
-              <i class="pi" [ngClass]="hasProduct ? 'pi-check-circle text-success' : 'pi-times-circle text-danger'"></i>
-              <span class="req-label">2. Product / Conveyor Cargo</span>
-              <span class="db-badge" [ngClass]="hasProduct ? 'badge-success' : 'badge-danger'">{{ hasProduct ? 'DETECTED' : 'NOT FOUND' }}</span>
-            </div>
-            <div class="req-item" [class.valid]="hasLight" [class.invalid]="!hasLight">
-              <i class="pi" [ngClass]="hasLight ? 'pi-check-circle text-success' : 'pi-times-circle text-danger'"></i>
-              <span class="req-label">3. Signal Light (Tower Lamp)</span>
-              <span class="db-badge" [ngClass]="hasLight ? 'badge-success' : 'badge-danger'">{{ hasLight ? 'DETECTED' : 'NOT FOUND' }}</span>
-            </div>
-          </div>
-
-          <p class="inappropriate-hint">
-            <i class="pi pi-info-circle"></i>
-            Analysis cannot be generated for casual photos, selfies, or rooms. The model accepts images containing <strong>machine</strong>, <strong>product</strong>, and <strong>signal light</strong>.
-          </p>
-        </div>
-      </div>
-
-      <!-- DETECTED STATUS METRICS (TRAINED MODEL DOMAIN) -->
-      <div class="db-alerts-card" *ngIf="selectedImage && !isAnalyzing && isImageAppropriate === true">
-        <div class="db-alerts-header">
-          <div>
-            <h3 class="db-alerts-title">ML Dataset Output</h3>
-            <p class="db-alerts-subtitle">Real-time classification outcomes</p>
-          </div>
-          <span class="confidence-tag"><i class="pi pi-shield"></i> Valid Dataset Model</span>
-        </div>
-
-        <div class="db-table-wrapper">
-          <table class="db-table">
-            <thead>
-              <tr>
-                <th>CHECKPOINT</th>
-                <th class="text-right">INFERRED STATUS</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="checkpoint-name">
-                  <i class="pi pi-cog"></i> Machine Running
-                </td>
-                <td class="text-right">
-                  <span class="db-badge" [ngClass]="detectedStatus.machineRunning ? 'badge-success' : 'badge-neutral'">
-                    <span class="badge-dot"></span>
-                    {{ detectedStatus.machineRunning ? 'RUNNING' : 'STOPPED' }}
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <td class="checkpoint-name">
-                  <i class="pi pi-box"></i> Product Present
-                </td>
-                <td class="text-right">
-                  <span class="db-badge" [ngClass]="detectedStatus.productPresent ? 'badge-success' : 'badge-neutral'">
-                    <span class="badge-dot"></span>
-                    {{ detectedStatus.productPresent ? 'DETECTED' : 'MISSING' }}
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <td class="checkpoint-name">
-                  <i class="pi pi-bolt"></i> Signal Light
-                </td>
-                <td class="text-right">
-                  <span class="db-badge" [ngClass]="detectedStatus.lightGreen ? 'badge-success' : 'badge-danger'">
-                    <span class="badge-dot"></span>
-                    {{ detectedStatus.lightGreen ? 'GREEN' : 'RED / OFF' }}
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <td class="checkpoint-name">
-                  <i class="pi pi-user"></i> Operator Presence
-                </td>
-                <td class="text-right">
-                  <span class="db-badge" [ngClass]="detectedStatus.operatorPresent ? 'badge-success' : 'badge-danger'">
-                    <span class="badge-dot"></span>
-                    {{ detectedStatus.operatorPresent ? 'PRESENT' : 'ABSENT' }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- ALERTS LIST GENERATED FROM ML INFERENCE -->
-      <div class="db-alerts-card" *ngIf="selectedImage && !isAnalyzing && isImageAppropriate === true && alerts.length > 0">
-        <div class="db-alerts-header">
-          <div>
-            <h3 class="db-alerts-title">System Alerts</h3>
-            <p class="db-alerts-subtitle">Triggered by model detection</p>
-          </div>
-          <span class="alert-count">{{ alerts.length }} Active</span>
-        </div>
-
-        <div class="db-alerts-list">
-          <div *ngFor="let alert of alerts" class="db-alert-item" [ngClass]="alert.typeClass">
-            <span class="db-alert-badge">
-              <i class="pi" [ngClass]="{
-                'pi-exclamation-triangle': alert.typeClass.includes('danger') || alert.typeClass.includes('critical'),
-                'pi-info-circle': alert.typeClass.includes('warning') || alert.typeClass.includes('info')
-              }"></i>
-              {{ alert.type }}
-            </span>
-            <span class="db-alert-text">{{ alert.text }}</span>
-          </div>
-        </div>
-      </div>
+    <div class="db-alerts-section" style="margin-top: 2rem;">
 
       <!-- EMPTY STATE WHEN NO IMAGE IS UPLOADED -->
-      <div class="db-alerts-card empty-card" *ngIf="!selectedImage">
+      <div class="db-alerts-card empty-card" *ngIf="imageAnalyses.length === 0">
         <div class="empty-state">
-          <i class="pi pi-chart-bar empty-icon"></i>
+          <i class="pi pi-camera empty-icon"></i>
           <h4>Awaiting Camera Feed</h4>
-          <p>Upload a factory floor image or start live camera feed to render machine learning classifications.</p>
+          <p>Upload factory floor images or start live camera feed to render machine learning classifications.</p>
         </div>
       </div>
 
+      <!-- GRID FOR ANALYSIS CARDS (3 COLUMNS PER ROW) -->
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;" *ngIf="imageAnalyses.length > 0">
+        
+        <div class="analysis-card" *ngFor="let analysis of imageAnalyses; let i = index" style="background: var(--surface-card); backdrop-filter: blur(16px); border-radius: var(--radius-xl); padding: 1.25rem; border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: var(--shadow-premium); display: flex; flex-direction: column; gap: 1rem;">
+          
+          <!-- Header (Line X + Status + Remove) -->
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+             <h3 style="margin: 0; font-weight: 800; font-size: 1.2rem; color: var(--text-main);">Line {{ i + 1 }}</h3>
+             <div style="display: flex; gap: 0.75rem; align-items: center;">
+                 <span class="db-badge" [ngClass]="analysis.detectedStatus?.machineRunning ? 'badge-success' : 'badge-danger'" *ngIf="!analysis.isAnalyzing && analysis.isAppropriate" style="padding: 0.3rem 0.6rem; font-size: 0.65rem;">
+                    <span class="badge-dot"></span> {{ analysis.detectedStatus.machineRunning ? 'Running' : 'Stopped' }}
+                 </span>
+                 <button (click)="removeImage(analysis.id)" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 0.4rem; border-radius: 50%; display: flex; transition: background 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.05)'" onmouseout="this.style.background='transparent'">
+                    <i class="pi pi-times" style="font-size: 1rem;"></i>
+                 </button>
+             </div>
+          </div>
+
+          <!-- Image -->
+          <div class="image-frame" style="width: 100%; border-radius: var(--radius-md); overflow: hidden; position: relative; border: 2px solid rgba(255,255,255,0.9); box-shadow: 0 4px 10px rgba(0,0,0,0.1); background: #000;">
+             <img #previewImg [id]="'img-' + analysis.id" [src]="analysis.imageUrl" (load)="runModelInference(analysis.id)" style="width: 100%; height: auto; object-fit: contain; display: block;" />
+             <div class="scanner-line" *ngIf="analysis.isAnalyzing"></div>
+          </div>
+
+          <!-- Status / Table -->
+          <div *ngIf="analysis.isAnalyzing" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+             <span class="spinner" style="margin-right: 0.5rem;"></span> Analyzing image...
+          </div>
+          
+          <div *ngIf="!analysis.isAnalyzing && analysis.isAppropriate === false">
+             <!-- Inappropriate Error -->
+             <div class="inappropriate-msg-box" style="background: #fef2f2; border: 1px solid #fecaca; padding: 1rem; border-radius: var(--radius-md); color: #991b1b; font-weight: 600; display: flex; gap: 0.75rem;">
+                <i class="pi pi-exclamation-triangle" style="margin-top: 0.15rem; font-size: 1.2rem; color: #dc2626;"></i>
+                <span>{{ analysis.inappropriateMessage }}</span>
+             </div>
+          </div>
+
+          <div *ngIf="!analysis.isAnalyzing && analysis.isAppropriate === true">
+             <!-- The statuses -->
+             <div class="status-list" style="display: flex; flex-direction: column; gap: 0.75rem; padding: 0.25rem 0;">
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(0,0,0,0.05);">
+                   <span style="color: var(--text-muted); font-weight: 700; font-size: 0.85rem; display: flex; align-items: center;"><i class="pi pi-user" style="margin-right: 0.5rem; font-size: 0.95rem;"></i> Employee Status</span>
+                   <span [style.color]="analysis.detectedStatus.operatorPresent ? 'var(--success-text)' : 'var(--danger-text)'" style="font-weight: 800; font-size: 0.85rem;">{{ analysis.detectedStatus.operatorPresent ? 'Available' : 'Not Available' }}</span>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(0,0,0,0.05);">
+                   <span style="color: var(--text-muted); font-weight: 700; font-size: 0.85rem; display: flex; align-items: center;"><i class="pi pi-cog" style="margin-right: 0.5rem; font-size: 0.95rem;"></i> Machine Status</span>
+                   <span [style.color]="analysis.detectedStatus.machineRunning ? 'var(--success-text)' : 'var(--danger-text)'" style="font-weight: 800; font-size: 0.85rem;">{{ analysis.detectedStatus.machineRunning ? 'Running' : 'Idle' }}</span>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                   <span style="color: var(--text-muted); font-weight: 700; font-size: 0.85rem; display: flex; align-items: center;"><i class="pi pi-bolt" style="margin-right: 0.5rem; font-size: 0.95rem;"></i> Light Status</span>
+                   <span [style.color]="analysis.detectedStatus.lightGreen ? 'var(--success-text)' : 'var(--danger-text)'" style="font-weight: 800; font-size: 0.85rem;">{{ analysis.detectedStatus.lightGreen ? 'Green' : 'Red' }}</span>
+                </div>
+                
+             </div>
+          </div>
+
+          <!-- Alerts Box -->
+          <div *ngIf="!analysis.isAnalyzing && analysis.isAppropriate === true && analysis.alerts.length > 0" style="margin-top: auto;">
+             <div *ngFor="let alert of analysis.alerts" style="background: linear-gradient(135deg, #fef2f2, #fee2e2); border: 1px solid #fca5a5; color: #b91c1c; padding: 1rem; border-radius: var(--radius-md); font-weight: 700; font-size: 0.85rem; display: flex; gap: 0.6rem; align-items: flex-start; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15); margin-bottom: 0.25rem;">
+                <i class="pi pi-exclamation-triangle" style="margin-top: 0.1rem; font-size: 1rem;"></i>
+                <div style="display: flex; flex-direction: column; gap: 0.3rem; flex: 1;">
+                   <span style="text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.7rem; color: #dc2626; font-weight: 800;">System Alert</span>
+                   <span style="line-height: 1.3;">{{ alert.text }}</span>
+                </div>
+             </div>
+          </div>
+
+        </div>
+      </div>
     </div>
 
   </div>

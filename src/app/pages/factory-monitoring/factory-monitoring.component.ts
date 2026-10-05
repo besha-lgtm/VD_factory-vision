@@ -1,10 +1,28 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, ViewChildren, QueryList } from '@angular/core';
 import * as tf from '@tensorflow/tfjs';
 
 interface AlertItem {
   type: string;
   typeClass: string;
   text: string;
+}
+
+interface ImageAnalysis {
+  id: string;
+  imageUrl: string | ArrayBuffer;
+  isAnalyzing: boolean;
+  isAppropriate: boolean | null;
+  hasMachine: boolean;
+  hasProduct: boolean;
+  hasLight: boolean;
+  inappropriateMessage: string;
+  detectedStatus: {
+    machineRunning: boolean;
+    productPresent: boolean;
+    lightGreen: boolean;
+    operatorPresent: boolean;
+  };
+  alerts: AlertItem[];
 }
 
 @Component({
@@ -14,10 +32,10 @@ interface AlertItem {
   styleUrls: ['./factory-monitoring.component.css']
 })
 export class FactoryMonitoringComponent implements OnInit, OnDestroy {
-  @ViewChild('previewImg') previewImg?: ElementRef<HTMLImageElement>;
+  @ViewChildren('previewImg') previewImgs!: QueryList<ElementRef<HTMLImageElement>>;
   @ViewChild('videoPlayer') videoPlayer?: ElementRef<HTMLVideoElement>;
 
-  selectedImage: string | ArrayBuffer | null = null;
+  imageAnalyses: ImageAnalysis[] = [];
   inputMode: 'upload' | 'camera' = 'upload';
 
   // Live Camera stream & recurring 5s timer
@@ -28,13 +46,6 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
   private captureTimer: any = null;
   private countdownTimer: any = null;
 
-  // Domain validation (machine, product, and signal light)
-  isImageAppropriate: boolean | null = null;
-  hasMachine = false;
-  hasProduct = false;
-  hasLight = false;
-  inappropriateMessage = '';
-
   // Separate, modular vision models for future scalability & granular insights
   operatorModel: tf.LayersModel | null = null;
   productModel: tf.LayersModel | null = null;
@@ -42,16 +53,6 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
   unifiedFallbackModel: tf.LayersModel | null = null;
 
   isModelLoading = true;
-  isAnalyzing = false;
-
-  detectedStatus = {
-    machineRunning: false,
-    productPresent: false,
-    lightGreen: false,
-    operatorPresent: false
-  };
-
-  alerts: AlertItem[] = [];
 
   async ngOnInit(): Promise<void> {
     try {
@@ -92,13 +93,7 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
     }
 
     this.inputMode = mode;
-    this.selectedImage = null;
-    this.alerts = [];
-    this.isImageAppropriate = null;
-    this.hasMachine = false;
-    this.hasProduct = false;
-    this.hasLight = false;
-    this.inappropriateMessage = '';
+    this.imageAnalyses = [];
 
     if (mode === 'camera') {
       this.startCamera();
@@ -195,36 +190,85 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
     if (!ctx) return;
 
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    this.selectedImage = canvas.toDataURL('image/jpeg');
+    const dataUrl = canvas.toDataURL('image/jpeg');
 
-    // Run model inference directly on canvas
-    this.runModelInference(canvas);
+    const newAnalysis = this.createEmptyAnalysis(dataUrl);
+    // Overwrite for camera mode, we just want the latest active frame
+    this.imageAnalyses = [newAnalysis];
+
+    // Run inference directly on canvas
+    this.runModelInference(newAnalysis.id, canvas);
   }
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-      const file = input.files[0];
-      const reader = new FileReader();
-
-      reader.onload = () => {
-        this.selectedImage = reader.result;
-      };
-
-      reader.readAsDataURL(file);
+    if (input.files && input.files.length > 0) {
+      const files = Array.from(input.files);
+      
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (reader.result) {
+            const newAnalysis = this.createEmptyAnalysis(reader.result);
+            this.imageAnalyses.push(newAnalysis);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+      // Clear input so same files can be chosen again
+      input.value = '';
     }
   }
+  
+  removeImage(id: string): void {
+    this.imageAnalyses = this.imageAnalyses.filter(img => img.id !== id);
+  }
 
-  async runModelInference(sourceCanvas?: HTMLCanvasElement): Promise<void> {
+  clearImages(): void {
+    this.imageAnalyses = [];
+  }
+
+  createEmptyAnalysis(imageUrl: string | ArrayBuffer): ImageAnalysis {
+    return {
+      id: Math.random().toString(36).substring(2, 9),
+      imageUrl,
+      isAnalyzing: false,
+      isAppropriate: null,
+      hasMachine: false,
+      hasProduct: false,
+      hasLight: false,
+      inappropriateMessage: '',
+      detectedStatus: {
+        machineRunning: false,
+        productPresent: false,
+        lightGreen: false,
+        operatorPresent: false
+      },
+      alerts: []
+    };
+  }
+
+  async runModelInference(id: string, sourceCanvas?: HTMLCanvasElement): Promise<void> {
+    const analysis = this.imageAnalyses.find(a => a.id === id);
+    if (!analysis) return;
+
     const hasModularModels = this.operatorModel && this.productModel && this.machineLightModel;
     if (!hasModularModels && !this.unifiedFallbackModel) return;
 
-    const imgEl: HTMLImageElement | HTMLCanvasElement | null =
-      sourceCanvas || (this.previewImg ? this.previewImg.nativeElement : null);
+    let imgEl: HTMLImageElement | HTMLCanvasElement | null = sourceCanvas || null;
+    
+    // Find the rendered img element if we didn't pass a canvas
+    if (!imgEl && this.previewImgs) {
+      const imgElements = this.previewImgs.toArray();
+      const matchingImg = imgElements.find(el => el.nativeElement.id === 'img-' + id);
+      if (matchingImg) {
+        imgEl = matchingImg.nativeElement;
+      }
+    }
 
     if (!imgEl) return;
 
-    this.isAnalyzing = true;
+    analysis.isAnalyzing = true;
 
     try {
       // 1. Convert image element/canvas to tensor and normalize dimensions (224x224x3)
@@ -283,22 +327,22 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
         spectralGreenDetected
       });
 
-      this.hasMachine = validation.hasMachine;
-      this.hasProduct = validation.hasProduct;
-      this.hasLight = validation.hasLight;
-      this.isImageAppropriate = validation.isAppropriate;
-      this.inappropriateMessage = validation.message;
+      analysis.hasMachine = validation.hasMachine;
+      analysis.hasProduct = validation.hasProduct;
+      analysis.hasLight = validation.hasLight;
+      analysis.isAppropriate = validation.isAppropriate;
+      analysis.inappropriateMessage = validation.message;
 
       // If image is inappropriate (missing machine, product, or light), do NOT generate analysis
-      if (!this.isImageAppropriate) {
-        this.alerts = [];
-        this.detectedStatus = {
+      if (!analysis.isAppropriate) {
+        analysis.alerts = [];
+        analysis.detectedStatus = {
           machineRunning: false,
           productPresent: false,
           lightGreen: false,
           operatorPresent: false
         };
-        console.warn('Image rejected:', validation.message);
+        console.warn(`Image ${id} rejected:`, validation.message);
         return;
       }
 
@@ -308,25 +352,25 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
       const isLightGreen = lightScore >= 0.5;
       const isMachineRunning = isLightGreen;
 
-      this.detectedStatus = {
+      analysis.detectedStatus = {
         machineRunning: isMachineRunning,
         productPresent: isProductPresent,
         lightGreen: isLightGreen,
         operatorPresent: isOperatorPresent
       };
 
-      console.log('Dynamic Vision Inference Results:', {
+      console.log(`Dynamic Vision Inference Results (${id}):`, {
         operator: `${(opScore * 100).toFixed(1)}% (${isOperatorPresent ? 'PRESENT' : 'ABSENT'})`,
         product: `${(prodScore * 100).toFixed(1)}% (${isProductPresent ? 'DETECTED' : 'MISSING'})`,
         machineLight: `${(lightScore * 100).toFixed(1)}% (${isLightGreen ? 'GREEN / RUNNING' : 'RED / STOPPED'})`
       });
 
       // 5. Evaluate multi-condition alert requirements
-      this.evaluateAlerts();
+      this.evaluateAlerts(analysis);
     } catch (err) {
-      console.error('Inference error:', err);
+      console.error(`Inference error on ${id}:`, err);
     } finally {
-      this.isAnalyzing = false;
+      analysis.isAnalyzing = false;
     }
   }
 
@@ -366,28 +410,25 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
    *   Condition 1: Operator Present
    *   Condition 2: Product Present
    *   Condition 3: Machine Running / Green Machine Light
-   * 
-   * If any one condition fails or is absent, clearly identifies the failed condition and raises an alert.
-   * If all three are satisfied, no failure alert is raised.
    */
-  private evaluateAlerts(): void {
-    this.alerts = [];
+  private evaluateAlerts(analysis: ImageAnalysis): void {
+    analysis.alerts = [];
 
-    const isOperator = this.detectedStatus.operatorPresent;
-    const isProduct = this.detectedStatus.productPresent;
-    const isGreenLight = this.detectedStatus.lightGreen;
-    const isMachineRunning = this.detectedStatus.machineRunning;
+    const isOperator = analysis.detectedStatus.operatorPresent;
+    const isProduct = analysis.detectedStatus.productPresent;
+    const isGreenLight = analysis.detectedStatus.lightGreen;
+    const isMachineRunning = analysis.detectedStatus.machineRunning;
 
     // Condition 1: Operator Presence Check
     if (!isOperator) {
       if (isMachineRunning && isProduct) {
-        this.alerts.push({
+        analysis.alerts.push({
           type: 'CRITICAL',
           typeClass: 'badge-danger',
           text: 'Unattended Machine Alert: Machine is running and product is present, but operator is ABSENT!'
         });
       } else {
-        this.alerts.push({
+        analysis.alerts.push({
           type: 'CRITICAL',
           typeClass: 'badge-danger',
           text: 'Operator Absence Alert: No operator detected at the production station.'
@@ -397,7 +438,7 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
 
     // Condition 2: Product Presence Check
     if (!isProduct) {
-      this.alerts.push({
+      analysis.alerts.push({
         type: 'WARNING',
         typeClass: 'badge-warning',
         text: 'Material Missing Alert: No product detected on the conveyor line!'
@@ -406,7 +447,7 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
 
     // Condition 3: Machine Running / Signal Light Check
     if (!isGreenLight || !isMachineRunning) {
-      this.alerts.push({
+      analysis.alerts.push({
         type: 'CRITICAL',
         typeClass: 'badge-danger',
         text: 'Machine Inactive Alert: Machine is STOPPED (Signal tower green light is OFF or RED)!'
@@ -415,10 +456,7 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Validates that the image contains the components our model was trained on:
-   * 1. Machine (conveyor structure & machinery framing, not a casual selfie/room)
-   * 2. Product (cardboard package or conveyor cargo)
-   * 3. Light (signal tower green/red/amber lamp)
+   * Validates that the image contains the components our model was trained on
    */
   private validateImageComponents(
     source: HTMLImageElement | HTMLCanvasElement,
@@ -485,7 +523,7 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
       }
       const isSelfieFace = (skinPixels / (centralPixels || 1)) > 0.18;
 
-      // 1. Signal Light: Green, Red, or Amber beacon, spectral detection, or model confidence
+      // 1. Signal Light
       let signalLightPixels = 0;
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
@@ -500,7 +538,7 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
       }
       const hasLight = !isSelfieFace && (scores.spectralGreenDetected || signalLightPixels >= 3 || scores.lightScore >= 0.35);
 
-      // 2. Machine: Conveyor rollers, frame, industrial metal, and model confidence
+      // 2. Machine
       let edgeCount = 0;
       const edgeThreshold = 32;
       for (let y = 1; y < sampleHeight - 1; y += 2) {
@@ -535,7 +573,7 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
 
       const hasMachine = !isSelfieFace && (edgeRatio >= 0.040 || metalGreyRatio >= 0.15 || (scores.prodScore >= 0.35 && scores.lightScore >= 0.35));
 
-      // 3. Product: Cardboard boxes or conveyor package freight or model confidence
+      // 3. Product
       let productPoints = 0;
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
@@ -547,11 +585,11 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
       }
       const hasProduct = !isSelfieFace && (productPoints >= 10 || scores.prodScore >= 0.35 || (hasMachine && edgeRatio >= 0.055));
 
-      // Overall: Require machine, product, and light
+      // Overall requirement
       let isAppropriate = hasMachine && hasProduct && hasLight;
 
-      // Temporal smoothing for live camera: avoid 1-frame glitches
-      if (this.inputMode === 'camera' && this.isImageAppropriate === true) {
+      // Temporal smoothing for live camera
+      if (this.inputMode === 'camera' && this.imageAnalyses.length > 0 && this.imageAnalyses[0].isAppropriate === true) {
         if (hasMachine && (hasProduct || hasLight)) {
           isAppropriate = true;
         }
