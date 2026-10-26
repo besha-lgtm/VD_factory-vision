@@ -1,0 +1,11 @@
+{
+  "modelName": "visipak-dynamic-3output-vision-model",
+  "labels": [
+    "Operator Present",
+    "Product Present",
+    "Machine Running (Green Light)"
+  ],
+  "imageSize": 224,
+  "threshold": 0.5,
+  "version": "1.0.0"
+}

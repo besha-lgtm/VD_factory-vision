@@ -1,13 +1,226 @@
 <div class="db-container">
 
   <!-- ============================================
-     SECTION 1: DASHBOARD HEADER
+     HERO TITLE SECTION
      ============================================ -->
-  <div class="db-header-section">
-    <div class="db-title-area">
-      <h1 class="db-title">Welcome to AI Vision Dashboard</h1>
-      <p class="db-subtitle">Glad to have you back! Have a productive day managing your operations.</p>
+  <div class="db-hero-section">
+    <div>
+      <h1 class="db-title">Vision Monitoring</h1>
+      <p class="db-subtitle">Factory AI Vision · Machine intelligence &amp; real-time alerts</p>
+    </div>
+    <div class="db-status-pill">
+      <span class="pulse-dot"></span> SYSTEM ACTIVE
     </div>
   </div>
 
-  
+  <!-- ============================================
+     SECTION 1: FACTORY AI VISION DASHBOARD (KPIS)
+     ============================================ -->
+  <div class="db-panel">
+    <div class="db-panel-head">
+      <div>
+        <h2 class="db-panel-title">
+          <span class="section-number">01</span> Factory AI Vision Dashboard
+        </h2>
+        <p class="db-panel-subtitle">Machine activity, operator presence and shift monitoring</p>
+      </div>
+
+      <div class="db-filter-bar">
+        <!-- Line Filter -->
+        <select class="db-select" [(ngModel)]="selectedLine" (ngModelChange)="onLineFilterChange()">
+          <option value="all">All Lines</option>
+          <option value="1">Line 1</option>
+          <option value="2">Line 2</option>
+          <option value="3">Line 3</option>
+          <option value="4">Line 4</option>
+          <option value="5">Line 5</option>
+          <option value="6">Line 6</option>
+        </select>
+
+        <!-- Shift Filter -->
+        <select class="db-select" [(ngModel)]="selectedShift" (ngModelChange)="onShiftFilterChange()">
+          <option value="current">Current Shift</option>
+          <option value="previous">Previous Shift</option>
+        </select>
+
+        <!-- Refresh Button -->
+        <button type="button" class="db-btn-refresh" (click)="refreshDashboard()">
+          <i class="pi pi-refresh"></i> Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- 4 KPI Metrics Grid -->
+    <div class="db-metrics-grid">
+      <!-- 1. Machines Monitored -->
+      <div class="metric-card">
+        <span class="metric-name">Machines Monitored</span>
+        <div class="metric-number">{{ metrics.machinesMonitored }}</div>
+        <span class="metric-foot">Across {{ metrics.linesCount }} production lines</span>
+      </div>
+
+      <!-- 2. Machines Running -->
+      <div class="metric-card card-green">
+        <span class="metric-name">Machines Running</span>
+        <div class="metric-number">{{ metrics.machinesRunning }}</div>
+        <span class="metric-foot">{{ metrics.runningPercentage }}% of monitored</span>
+      </div>
+
+      <!-- 3. Unattended Alerts -->
+      <div class="metric-card card-red">
+        <span class="metric-name">Unattended Alerts</span>
+        <div class="metric-number">{{ metrics.unattendedAlerts }}</div>
+        <span class="metric-foot">Require supervisor review</span>
+      </div>
+
+      <!-- 4. Stopped Time -->
+      <div class="metric-card">
+        <span class="metric-name">Stopped Time</span>
+        <div class="metric-number">
+          {{ metrics.stoppedTimeMin }} <span class="metric-unit">min</span>
+        </div>
+        <span class="metric-foot">Accumulated in selected shift</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+     SECTION 2: MACHINE-STATE TIMELINE
+     ============================================ -->
+  <div class="db-panel">
+    <div class="db-panel-head">
+      <div>
+        <h2 class="db-panel-title">
+          <span class="section-number">02</span> Machine-State Timeline
+        </h2>
+        <p class="db-panel-subtitle">Sample shift · Machine operating states over time</p>
+      </div>
+
+      <div class="timeline-legend">
+        <span><i class="legend-dot run"></i>Running</span>
+        <span><i class="legend-dot stop"></i>Stopped</span>
+        <span><i class="legend-dot warn"></i>Warning</span>
+      </div>
+    </div>
+
+    <!-- Timeline Chart Rows -->
+    <div class="timeline-chart">
+      <div class="machine-row" *ngFor="let r of filteredRecords">
+        <span class="machine-label">{{ r.id }}</span>
+        <div class="segments-container">
+          <div class="segment" 
+               *ngFor="let part of r.parts" 
+               [ngClass]="part.state" 
+               [style.flex]="part.flex" 
+               [title]="r.id + ' · ' + part.state.toUpperCase() + ' · ' + part.durationMin + ' min'">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hours Axis -->
+    <div class="hours-axis">
+      <span>08:00</span>
+      <span>10:00</span>
+      <span>12:00</span>
+      <span>14:00</span>
+      <span>16:00</span>
+    </div>
+
+    <p class="db-notice">
+      Hover over timeline segments to view the state and duration. Live synchronized with Vision inference telemetry.
+    </p>
+  </div>
+
+  <!-- ============================================
+     BOTTOM 2-COLUMN LAYOUT (SECTIONS 03 & 04)
+     ============================================ -->
+  <div class="db-two-col">
+
+    <!-- SECTION 3: RECENT AI ALERTS -->
+    <div class="db-panel">
+      <div class="db-panel-head">
+        <div>
+          <h2 class="db-panel-title">
+            <span class="section-number">03</span> Recent AI Alerts
+          </h2>
+          <p class="db-panel-subtitle">Machine events requiring action</p>
+        </div>
+        <span class="badge-alert-count" [ngClass]="openAlertsCount > 0 ? 'badge-red' : 'badge-green'">
+          {{ openAlertsCount }} Open
+        </span>
+      </div>
+
+      <div class="alerts-list">
+        <div class="alert-item" *ngFor="let a of filteredAlerts">
+          <div class="alert-text-block">
+            <strong class="alert-title">{{ a.machine }} — {{ a.name }}</strong>
+            <p class="alert-desc">{{ a.desc }}</p>
+          </div>
+          <div class="alert-actions">
+            <span class="alert-tag" [ngClass]="a.ack ? 'tag-green' : (a.type === 'red' ? 'tag-red' : 'tag-yellow')">
+              {{ a.ack ? 'Acknowledged' : (a.type === 'red' ? 'Review' : 'Warning') }}
+            </span>
+            <button type="button" class="btn-ack" *ngIf="!a.ack" (click)="acknowledge(a.id)">
+              Acknowledge
+            </button>
+          </div>
+        </div>
+
+        <p class="db-empty-notice" *ngIf="filteredAlerts.length === 0">
+          No active alerts for the selected line.
+        </p>
+      </div>
+    </div>
+
+    <!-- SECTION 4: MACHINE OVERVIEW -->
+    <div class="db-panel">
+      <div class="db-panel-head">
+        <div>
+          <h2 class="db-panel-title">
+            <span class="section-number">04</span> Machine Overview
+          </h2>
+          <p class="db-panel-subtitle">Current machine and operator status</p>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="db-overview-table">
+          <thead>
+            <tr>
+              <th>Machine</th>
+              <th>State</th>
+              <th>Operator</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of filteredRecords">
+              <td><strong>{{ r.id }}</strong></td>
+              <td>
+                <span class="status-pill" [ngClass]="r.state.toLowerCase()">
+                  <span class="status-dot"></span> {{ r.state }}
+                </span>
+              </td>
+              <td>
+                <span [style.color]="r.operator === 'Present' ? '#15803d' : '#b91c1c'" style="font-weight: 700;">
+                  <i class="pi" [ngClass]="r.operator === 'Present' ? 'pi-user' : 'pi-user-minus'" style="font-size: 0.8rem; margin-right: 4px;"></i>
+                  {{ r.operator }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="db-notice" style="margin-top: 16px;">
+        Factory floor camera surveillance &amp; vision model updates active.
+      </p>
+    </div>
+
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="db-toast" [class.show]="showToast" role="status">
+    <i class="pi pi-info-circle" style="margin-right: 8px;"></i> {{ toastMessage }}
+  </div>
+
+</div>

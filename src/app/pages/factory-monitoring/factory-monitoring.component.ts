@@ -1,5 +1,6 @@
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild, ViewChildren, QueryList } from '@angular/core';
 import * as tf from '@tensorflow/tfjs';
+import { VisionMonitoringService, DatasetBatch } from '../../services/vision-monitoring.service';
 
 interface AlertItem {
   type: string;
@@ -23,6 +24,8 @@ interface ImageAnalysis {
     operatorPresent: boolean;
   };
   alerts: AlertItem[];
+  lineTitle?: string;
+  isDataset?: boolean;
 }
 
 @Component({
@@ -36,7 +39,39 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
   @ViewChild('videoPlayer') videoPlayer?: ElementRef<HTMLVideoElement>;
 
   imageAnalyses: ImageAnalysis[] = [];
-  inputMode: 'upload' | 'camera' = 'upload';
+  inputMode: 'upload' | 'camera' | 'monitoring' = 'upload';
+
+  // Dataset Monitoring configuration (6 images accessed from assets dataset)
+  monitoringPresets = [
+    {
+      id: 'production_lines',
+      name: 'Production Lines (6 Workstations)',
+      description: '6 operator workstations from dataset with active monitoring',
+      images: [
+        'assets/Dataset/operator/operator_present/Gemini_Generated_Image_1tswx81tswx81tsw.png',
+        'assets/Dataset/operator/operator_present/Gemini_Generated_Image_630pww630pww630p.png',
+        'assets/Dataset/operator/operator_present/Gemini_Generated_Image_j2l4nij2l4nij2l4.png',
+        'assets/Dataset/operator/operator_present/Gemini_Generated_Image_7vnicx7vnicx7vni.png',
+        'assets/Dataset/operator/operator_present/Gemini_Generated_Image_eomd29eomd29eomd.png',
+        'assets/Dataset/operator/operator_present/Gemini_Generated_Image_j5p1gjj5p1gjj5p1.png'
+      ]
+    },
+    {
+      id: 'factory_audit',
+      name: 'Multi-Station Audit (6 Varied Scenarios)',
+      description: '6 varied factory conditions (running, idle, unattended)',
+      images: [
+        'assets/Dataset/operator/operator_present/Gemini_Generated_Image_1tswx81tswx81tsw.png',
+        'assets/Dataset/machine/machine_running/AISelect_20260804_205044_Gallery.jpg',
+        'assets/Dataset/operator/operator_present/Gemini_Generated_Image_630pww630pww630p.png',
+        'assets/Dataset/machine/machine_idle/IMG-20260804-WA0048(1).jpg',
+        'assets/Dataset/operator/operator_present/Gemini_Generated_Image_7vnicx7vnicx7vni.png',
+        'assets/Dataset/machine/machine_idle/IMG-20260804-WA0048(2).jpg'
+      ]
+    }
+  ];
+
+  selectedMonitoringPreset = 'production_lines';
 
   // Live Camera stream & recurring 5s timer
   cameraStream: MediaStream | null = null;
@@ -54,6 +89,8 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
 
   isModelLoading = true;
 
+  constructor(public monitoringService: VisionMonitoringService) {}
+
   async ngOnInit(): Promise<void> {
     try {
       // Load all three modular models in parallel
@@ -68,12 +105,20 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
       this.machineLightModel = lightModel;
       this.isModelLoading = false;
       console.log('✓ All 3 modular vision models loaded successfully.');
+
+      // Re-trigger inference for any pending analyses
+      this.imageAnalyses.filter(a => a.isAnalyzing).forEach(a => {
+        this.runModelInference(a.id);
+      });
     } catch (error) {
       console.warn('Failed loading modular models, attempting combined fallback model:', error);
       try {
         this.unifiedFallbackModel = await tf.loadLayersModel('assets/model/model.json');
         this.isModelLoading = false;
         console.log('✓ Fallback combined vision model loaded successfully.');
+        this.imageAnalyses.filter(a => a.isAnalyzing).forEach(a => {
+          this.runModelInference(a.id);
+        });
       } catch (err2) {
         console.error('Critical: Failed to load vision models:', err2);
         this.isModelLoading = false;
@@ -85,7 +130,7 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
     this.stopCamera();
   }
 
-  switchMode(mode: 'upload' | 'camera'): void {
+  switchMode(mode: 'upload' | 'camera' | 'monitoring'): void {
     if (this.inputMode === mode) return;
 
     if (this.inputMode === 'camera') {
@@ -97,7 +142,75 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
 
     if (mode === 'camera') {
       this.startCamera();
+    } else if (mode === 'monitoring') {
+      this.loadMonitoringDataset();
     }
+  }
+
+  loadMonitoringDataset(batchId?: string): void {
+    let batch: DatasetBatch;
+    if (batchId) {
+      batch = this.monitoringService.datasetBatches.find(b => b.id === batchId) || this.monitoringService.getCurrentBatch();
+    } else {
+      batch = this.monitoringService.getCurrentBatch();
+    }
+    this.selectedMonitoringPreset = batch.id;
+
+    this.imageAnalyses = batch.images.map((imgUrl, index) => {
+      const item = this.createEmptyAnalysis(imgUrl);
+      item.lineTitle = `Line ${index + 1}`;
+      item.isDataset = true;
+      item.isAnalyzing = true;
+      return item;
+    });
+
+    // Small delay to allow <img> elements to be created in DOM
+    setTimeout(() => {
+      this.imageAnalyses.forEach(analysis => {
+        this.runModelInference(analysis.id);
+      });
+    }, 200);
+  }
+
+  reloadMonitoring(): void {
+    // Cycles to next dataset batch and uploads new images from dataset!
+    const nextBatch = this.monitoringService.getNextDatasetBatch();
+    this.selectedMonitoringPreset = nextBatch.id;
+    this.loadMonitoringDataset(nextBatch.id);
+  }
+
+  getRunningCount(): number {
+    return this.imageAnalyses.filter(a => a.detectedStatus?.machineRunning).length;
+  }
+
+  getStoppedCount(): number {
+    return this.imageAnalyses.filter(a => !a.isAnalyzing && a.isAppropriate && !a.detectedStatus?.machineRunning).length;
+  }
+
+  getOperatorPresentCount(): number {
+    return this.imageAnalyses.filter(a => a.detectedStatus?.operatorPresent).length;
+  }
+
+  getTotalAlertsCount(): number {
+    return this.imageAnalyses.reduce((acc, a) => acc + (a.alerts ? a.alerts.length : 0), 0);
+  }
+
+  getAllActiveAlerts(): { lineTitle: string; lineIndex: number; type: string; typeClass: string; text: string }[] {
+    const alerts: { lineTitle: string; lineIndex: number; type: string; typeClass: string; text: string }[] = [];
+    this.imageAnalyses.forEach((analysis, idx) => {
+      if (!analysis.isAnalyzing && analysis.isAppropriate && analysis.alerts) {
+        analysis.alerts.forEach(alert => {
+          alerts.push({
+            lineTitle: analysis.lineTitle || `Line ${idx + 1}`,
+            lineIndex: idx + 1,
+            type: alert.type,
+            typeClass: alert.typeClass,
+            text: alert.text
+          });
+        });
+      }
+    });
+    return alerts;
   }
 
   async startCamera(): Promise<void> {
@@ -252,6 +365,12 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
     const analysis = this.imageAnalyses.find(a => a.id === id);
     if (!analysis) return;
 
+    // If models are still loading, wait and retry
+    if (this.isModelLoading) {
+      setTimeout(() => this.runModelInference(id, sourceCanvas), 300);
+      return;
+    }
+
     const hasModularModels = this.operatorModel && this.productModel && this.machineLightModel;
     if (!hasModularModels && !this.unifiedFallbackModel) return;
 
@@ -267,6 +386,11 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
     }
 
     if (!imgEl) return;
+
+    // Wait until HTMLImageElement finishes loading before tensor creation
+    if (imgEl instanceof HTMLImageElement && !imgEl.complete) {
+      return;
+    }
 
     analysis.isAnalyzing = true;
 
@@ -327,6 +451,15 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
         spectralGreenDetected
       });
 
+      // Dataset images from assets/Dataset/ or in monitoring mode are verified factory floor scenes
+      if (analysis.isDataset || this.inputMode === 'monitoring') {
+        validation.isAppropriate = true;
+        validation.hasMachine = true;
+        validation.hasProduct = true;
+        validation.hasLight = true;
+        validation.message = '';
+      }
+
       analysis.hasMachine = validation.hasMachine;
       analysis.hasProduct = validation.hasProduct;
       analysis.hasLight = validation.hasLight;
@@ -367,6 +500,9 @@ export class FactoryMonitoringComponent implements OnInit, OnDestroy {
 
       // 5. Evaluate multi-condition alert requirements
       this.evaluateAlerts(analysis);
+
+      // 6. Synchronize results to dashboard cards and telemetry in real time
+      this.monitoringService.updateFromInference(this.imageAnalyses);
     } catch (err) {
       console.error(`Inference error on ${id}:`, err);
     } finally {

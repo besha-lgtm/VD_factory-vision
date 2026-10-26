@@ -1,4 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Subscription } from 'rxjs';
+import {
+  VisionMonitoringService,
+  MachineRecord,
+  AIAlert,
+  DashboardMetrics,
+  DatasetBatch
+} from '../../services/vision-monitoring.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -6,35 +14,130 @@ import { Component } from '@angular/core';
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit, OnDestroy {
 
+  // Selected filters
+  selectedLine = 'all';
+  selectedShift = 'current';
 
-  kpis = [
-    { label: 'OPEN POS', value: '18', subtitle: 'Customer orders', icon: 'pi pi-file', colorClass: 'blue' },
-    { label: 'DAILY JOBS', value: '24', subtitle: 'Active jobs', icon: 'pi pi-calendar', colorClass: 'purple' },
-    { label: 'QC PENDING', value: '06', subtitle: 'Awaiting approval', icon: 'pi pi-check-circle', colorClass: 'green' },
-    { label: 'DISPATCH PENDING', value: '09', subtitle: 'Ready / planned', icon: 'pi pi-box', colorClass: 'yellow' }
-  ];
+  // Subscriptions & data
+  private subscriptions = new Subscription();
+  records: MachineRecord[] = [];
+  alerts: AIAlert[] = [];
+  currentBatch?: DatasetBatch;
 
-  flowSteps = [
-    { label: 'Client PO' },
-    { label: 'Daily Job' },
-    { label: 'Item/PMS Check' },
-    { label: 'Stock Check' },
-    { label: 'Production' },
-    { label: 'QC' },
-    { label: 'Dispatch' }
-  ];
+  // Calculated metrics
+  metrics: DashboardMetrics = {
+    machinesMonitored: 6,
+    machinesRunning: 3,
+    runningPercentage: 50,
+    linesCount: 6,
+    unattendedAlerts: 2,
+    stoppedTimeMin: 144
+  };
 
-  priorityJobs = [
-    { jobId: 'JC-001', customer: 'Laurus Unit-2', item: '2000541', reqQty: '5,000', decision: 'Prod Required', decisionClass: 'decision-prod' },
-    { jobId: 'JC-002', customer: 'Gland Pharma', item: '2000609', reqQty: '2,505', decision: 'Dispatch Ready', decisionClass: 'decision-ready' },
-    { jobId: 'JC-003', customer: 'Pidilite', item: '2700428729', reqQty: '3,000', decision: 'Stock Check', decisionClass: 'decision-stock' }
-  ];
+  // Toast feedback state
+  toastMessage = '';
+  showToast = false;
+  private toastTimer: any = null;
 
-  alerts = [
-    { type: 'Reorder', text: '120 GSM below minimum weight', typeClass: 'alert-reorder' },
-    { type: 'Review', text: 'PMS missing for one PO line', typeClass: 'alert-review' },
-    { type: 'QC', text: '3 jobs waiting for final QC', typeClass: 'alert-qc' }
-  ];
+  constructor(private monitoringService: VisionMonitoringService) {}
+
+  ngOnInit(): void {
+    this.currentBatch = this.monitoringService.getCurrentBatch();
+
+    this.subscriptions.add(
+      this.monitoringService.records$.subscribe(records => {
+        this.records = records;
+        this.updateView();
+      })
+    );
+
+    this.subscriptions.add(
+      this.monitoringService.alerts$.subscribe(alerts => {
+        this.alerts = alerts;
+        this.updateView();
+      })
+    );
+
+    this.subscriptions.add(
+      this.monitoringService.selectedBatch$.subscribe(batch => {
+        this.currentBatch = batch;
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+  }
+
+  // Filtered lists based on user selection
+  get filteredRecords(): MachineRecord[] {
+    if (this.selectedLine === 'all') {
+      return this.records;
+    }
+    const lineNum = parseInt(this.selectedLine, 10);
+    return this.records.filter(r => r.line === lineNum);
+  }
+
+  get filteredAlerts(): AIAlert[] {
+    if (this.selectedLine === 'all') {
+      return this.alerts;
+    }
+    const lineNum = parseInt(this.selectedLine, 10);
+    return this.alerts.filter(a => a.line === lineNum);
+  }
+
+  get openAlertsCount(): number {
+    return this.filteredAlerts.filter(a => !a.ack).length;
+  }
+
+  onLineFilterChange(): void {
+    this.updateView();
+    this.triggerToast(`Filtered view for ${this.selectedLine === 'all' ? 'All Lines' : 'Line ' + this.selectedLine}`);
+  }
+
+  onShiftFilterChange(): void {
+    this.updateView();
+    this.triggerToast(`Displaying ${this.selectedShift === 'current' ? 'Current Shift' : 'Previous Shift'} telemetry`);
+  }
+
+  // Refresh dashboard and cycle dataset images
+  refreshDashboard(): void {
+    const nextBatch = this.monitoringService.getNextDatasetBatch();
+    this.currentBatch = nextBatch;
+    this.updateView();
+    this.triggerToast(`↻ Dashboard updated with dataset: ${nextBatch.name}`);
+  }
+
+  // Acknowledge alert
+  acknowledge(alertId: number): void {
+    this.monitoringService.acknowledgeAlert(alertId);
+    this.triggerToast(`Alert #${alertId} acknowledged`);
+  }
+
+  private updateView(): void {
+    const baseMetrics = this.monitoringService.getMetrics(this.selectedLine);
+    if (this.selectedShift === 'previous') {
+      // Offset slightly for historical shift comparison
+      this.metrics = {
+        ...baseMetrics,
+        stoppedTimeMin: Math.round(baseMetrics.stoppedTimeMin * 1.35)
+      };
+    } else {
+      this.metrics = baseMetrics;
+    }
+  }
+
+  private triggerToast(message: string): void {
+    this.toastMessage = message;
+    this.showToast = true;
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => {
+      this.showToast = false;
+    }, 2800);
+  }
 }

@@ -1,0 +1,7 @@
+{
+  "modelName": "yolo-product-detector",
+  "target": "Product Presence",
+  "threshold": 0.5,
+  "version": "1.0.0",
+  "description": "Vision model for detecting products/packages on the conveyor line"
+}

@@ -1,0 +1,7 @@
+{
+  "modelName": "yolo-machine-light-detector",
+  "target": "Machine Running (Green Light)",
+  "threshold": 0.5,
+  "version": "1.0.0",
+  "description": "Vision model for detecting green signal light indicating active machine running status"
+}
